@@ -810,6 +810,7 @@
 
         /* Dashboard */
         .dashboard-container {
+            display: none;
             min-height: 100vh;
         }
 
@@ -3108,8 +3109,10 @@
 
         // Show dashboard
         function showDashboard() {
-            authContainer.style.display = 'none';
+            authContainer.classList.add('hidden');
+            dashboardContainer.classList.remove('hidden');
             dashboardContainer.style.display = 'block';
+
             
             // Reset sidebar state pada mobile
             if (window.innerWidth <= 1024) {
