@@ -1,0 +1,3199 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Mudarris - Platform Digital Terpadu untuk Guru Madrasah</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0f172a;
+            --primary-light: #1e293b;
+            --secondary: #3b82f6;
+            --secondary-dark: #2563eb;
+            --accent: #8b5cf6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --sidebar-width: 260px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(59, 130, 246, 0.08) 0%, transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.05) 0%, transparent 25%);
+        }
+
+        /* Loading Screen */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--primary);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(59, 130, 246, 0.3);
+            border-top-color: var(--secondary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        /* Auth Container */
+        .auth-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .auth-card {
+            width: 100%;
+            max-width: 500px;
+            background-color: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .auth-header {
+            padding: 40px 40px 20px;
+            text-align: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .logo-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--secondary), var(--accent));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+        }
+
+        .logo-icon i {
+            font-size: 24px;
+            color: white;
+        }
+
+        .logo-text {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(to right, var(--text-primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .auth-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .auth-subtitle {
+            color: var(--text-secondary);
+            font-size: 15px;
+            margin-bottom: 30px;
+        }
+
+        .auth-body {
+            padding: 0 40px 40px;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .auth-body::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .auth-body::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+
+        .auth-body::-webkit-scrollbar-thumb {
+            background: var(--secondary);
+            border-radius: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .form-label.required::after {
+            content: " *";
+            color: var(--error);
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 18px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px 16px 14px 48px;
+            background-color: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            font-size: 14px;
+            transition: var(--transition);
+        }
+
+        .form-input.small {
+            padding: 12px 16px 12px 48px;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--secondary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        .form-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .form-input.error {
+            border-color: var(--error);
+        }
+
+        .form-input.success {
+            border-color: var(--success);
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 18px;
+        }
+
+        /* Radio button group */
+        .radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+        }
+
+        .radio-input {
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--border);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+
+        .radio-input::after {
+            content: "";
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--secondary);
+            opacity: 0;
+            transition: var(--transition);
+        }
+
+        .radio-option input:checked + .radio-input {
+            border-color: var(--secondary);
+        }
+
+        .radio-option input:checked + .radio-input::after {
+            opacity: 1;
+        }
+
+        .radio-text {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .radio-option input {
+            display: none;
+        }
+
+        /* Dynamic input groups */
+        .dynamic-input-group {
+            margin-top: 12px;
+        }
+
+        .dynamic-input-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+
+        .dynamic-input {
+            flex: 1;
+        }
+
+        .btn-add, .btn-remove {
+            width: 36px;
+            height: 36px;
+            border-radius: var(--radius-sm);
+            border: none;
+            background-color: rgba(59, 130, 246, 0.2);
+            color: var(--secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+
+        .btn-add:hover {
+            background-color: rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-remove {
+            background-color: rgba(239, 68, 68, 0.2);
+            color: var(--error);
+        }
+
+        .btn-remove:hover {
+            background-color: rgba(239, 68, 68, 0.3);
+        }
+
+        /* Photo upload */
+        .photo-upload-group {
+            margin-top: 12px;
+        }
+
+        .photo-options {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .photo-preview {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 2px dashed var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            margin: 0 auto 20px;
+            position: relative;
+        }
+
+        .photo-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .photo-placeholder {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .photo-placeholder i {
+            font-size: 32px;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .btn-photo {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid var(--border);
+            background-color: rgba(15, 23, 42, 0.5);
+            color: var(--text-secondary);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .btn-photo:hover {
+            border-color: var(--secondary);
+            color: var(--secondary);
+        }
+
+        .btn-photo.active {
+            border-color: var(--secondary);
+            background-color: rgba(59, 130, 246, 0.1);
+            color: var(--secondary);
+        }
+
+        .camera-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--primary);
+            z-index: 10000;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .camera-preview {
+            width: 90%;
+            max-width: 500px;
+            max-height: 500px;
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .camera-preview video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .camera-controls {
+            display: flex;
+            gap: 16px;
+        }
+
+        /* Checkbox group */
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-top: 8px;
+        }
+
+        .checkbox-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .checkbox-input {
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--border);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+
+        .checkbox-input::after {
+            content: "✓";
+            color: white;
+            font-size: 12px;
+            opacity: 0;
+            transition: var(--transition);
+        }
+
+        .checkbox-option input:checked + .checkbox-input {
+            background-color: var(--secondary);
+            border-color: var(--secondary);
+        }
+
+        .checkbox-option input:checked + .checkbox-input::after {
+            opacity: 1;
+        }
+
+        .checkbox-text {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .checkbox-option input {
+            display: none;
+        }
+
+        /* Theme toggle */
+        .theme-toggle-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .theme-option {
+            flex: 1;
+            text-align: center;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .theme-option:hover {
+            border-color: var(--secondary);
+        }
+
+        .theme-option.active {
+            border-color: var(--secondary);
+            background-color: rgba(59, 130, 246, 0.1);
+        }
+
+        .theme-icon {
+            font-size: 20px;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .theme-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        /* Form section */
+        .form-section {
+            background-color: rgba(15, 23, 42, 0.3);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+        }
+
+        .form-section-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-section-title i {
+            color: var(--secondary);
+        }
+
+        /* Validation messages */
+        .validation-message {
+            font-size: 12px;
+            margin-top: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .validation-message.error {
+            color: var(--error);
+        }
+
+        .validation-message.success {
+            color: var(--success);
+        }
+
+        .validation-message.warning {
+            color: var(--warning);
+        }
+
+        /* Password strength */
+        .password-strength {
+            height: 4px;
+            background-color: var(--border);
+            border-radius: 2px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+
+        .password-strength-bar {
+            height: 100%;
+            width: 0%;
+            transition: var(--transition);
+            border-radius: 2px;
+        }
+
+        .password-strength.weak .password-strength-bar {
+            width: 33%;
+            background-color: var(--error);
+        }
+
+        .password-strength.medium .password-strength-bar {
+            width: 66%;
+            background-color: var(--warning);
+        }
+
+        .password-strength.strong .password-strength-bar {
+            width: 100%;
+            background-color: var(--success);
+        }
+
+        /* Conditional fields animation */
+        .conditional-field {
+            opacity: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .conditional-field.show {
+            opacity: 1;
+            max-height: 500px;
+            margin-top: 16px;
+        }
+
+        /* Buttons */
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(to right, var(--secondary), var(--accent));
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-primary:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            color: var(--secondary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background-color: rgba(59, 130, 246, 0.1);
+            border-color: var(--secondary);
+        }
+
+        .btn-small {
+            padding: 10px 20px;
+            width: auto;
+            font-size: 14px;
+        }
+
+        .auth-footer {
+            padding: 24px 40px;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        .auth-link {
+            color: var(--secondary);
+            text-decoration: none;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .auth-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Progress steps */
+        .signup-progress {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        .signup-progress::before {
+            content: "";
+            position: absolute;
+            top: 15px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background-color: var(--border);
+            z-index: 1;
+        }
+
+        .progress-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            z-index: 2;
+        }
+
+        .step-number {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: var(--border);
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            transition: var(--transition);
+        }
+
+        .step-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            transition: var(--transition);
+        }
+
+        .progress-step.active .step-number {
+            background-color: var(--secondary);
+            color: white;
+        }
+
+        .progress-step.active .step-label {
+            color: var(--secondary);
+            font-weight: 500;
+        }
+
+        .progress-step.completed .step-number {
+            background-color: var(--success);
+            color: white;
+        }
+
+        /* Alert Messages */
+        .alert {
+            padding: 16px;
+            border-radius: var(--radius-md);
+            margin-bottom: 24px;
+            display: none;
+            align-items: start;
+            gap: 12px;
+        }
+
+        .alert-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .alert-content {
+            flex: 1;
+        }
+
+        .alert-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .alert-message {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .alert-success {
+            background-color: rgba(16, 185, 129, 0.1);
+            border-left: 4px solid var(--success);
+        }
+
+        .alert-error {
+            background-color: rgba(239, 68, 68, 0.1);
+            border-left: 4px solid var(--error);
+        }
+
+        .alert-warning {
+            background-color: rgba(245, 158, 11, 0.1);
+            border-left: 4px solid var(--warning);
+        }
+
+        /* Dashboard */
+        .dashboard-container {
+            display: none;
+            min-height: 100vh;
+        }
+
+        .dashboard-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 70px;
+            background-color: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            z-index: 100;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .sidebar-toggle {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 20px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: var(--radius-sm);
+            transition: var(--transition);
+        }
+
+        .sidebar-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--secondary), var(--accent));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            overflow: hidden;
+        }
+
+        .user-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .user-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .user-role {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .logout-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: var(--radius-sm);
+            transition: var(--transition);
+        }
+
+        .logout-btn:hover {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: var(--error);
+        }
+
+        .dashboard-main {
+            display: flex;
+            min-height: calc(100vh - 70px);
+            margin-top: 70px;
+        }
+
+        .dashboard-sidebar {
+            width: var(--sidebar-width);
+            background-color: rgba(15, 23, 42, 0.8);
+            border-right: 1px solid var(--border);
+            padding: 30px 0;
+            transition: var(--transition);
+        }
+
+        .sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 0 20px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 20px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: var(--radius-md);
+            transition: var(--transition);
+            font-weight: 500;
+        }
+
+        .nav-item:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+        }
+
+        .nav-item.active {
+            background: linear-gradient(to right, rgba(59, 130, 246, 0.2), transparent);
+            color: var(--secondary);
+            border-left: 3px solid var(--secondary);
+        }
+
+        .nav-item i {
+            font-size: 18px;
+            width: 24px;
+        }
+
+        .dashboard-content {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        .welcome-section {
+            margin-bottom: 40px;
+        }
+
+        .welcome-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            background: linear-gradient(to right, var(--text-primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .welcome-subtitle {
+            color: var(--text-secondary);
+            font-size: 16px;
+        }
+
+        .teacher-info-card {
+            background-color: var(--card-bg);
+            border-radius: var(--radius-md);
+            padding: 24px;
+            border: 1px solid var(--border);
+            margin-bottom: 30px;
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .teacher-avatar-large {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--secondary), var(--accent));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            overflow: hidden;
+        }
+
+        .teacher-avatar-large img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .teacher-details h3 {
+            font-size: 20px;
+            margin-bottom: 8px;
+        }
+
+        .teacher-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-top: 12px;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .meta-item i {
+            color: var(--secondary);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background-color: var(--card-bg);
+            border-radius: var(--radius-md);
+            padding: 24px;
+            border: 1px solid var(--border);
+            transition: var(--transition);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--card-shadow);
+        }
+
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .stat-icon.students {
+            background-color: rgba(59, 130, 246, 0.2);
+            color: var(--secondary);
+        }
+
+        .stat-icon.attendance {
+            background-color: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+
+        .stat-icon.exams {
+            background-color: rgba(139, 92, 246, 0.2);
+            color: var(--accent);
+        }
+
+        .stat-icon.reports {
+            background-color: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .modules-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+        }
+
+        .module-card {
+            background-color: var(--card-bg);
+            border-radius: var(--radius-md);
+            padding: 30px;
+            border: 1px solid var(--border);
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .module-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--card-shadow);
+            border-color: var(--secondary);
+        }
+
+        .module-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, var(--secondary), var(--accent));
+        }
+
+        .module-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .module-description {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .module-link {
+            color: var(--secondary);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .module-link i {
+            transition: var(--transition);
+        }
+
+        .module-card:hover .module-link i {
+            transform: translateX(5px);
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .dashboard-sidebar {
+                position: fixed;
+                left: -100%;
+                top: 70px;
+                bottom: 0;
+                z-index: 99;
+                background-color: var(--primary);
+            }
+
+            .dashboard-sidebar.active {
+                left: 0;
+            }
+
+            .auth-body {
+                max-height: 65vh;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .auth-header,
+            .auth-body {
+                padding: 30px 24px;
+            }
+
+            .auth-footer {
+                padding: 20px 24px;
+            }
+
+            .auth-card {
+                max-width: 100%;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+
+            .dashboard-content {
+                padding: 20px;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .modules-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .welcome-title {
+                font-size: 24px;
+            }
+
+            .teacher-info-card {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+
+            .teacher-avatar-large {
+                margin: 0 auto;
+            }
+
+            .teacher-meta {
+                justify-content: center;
+            }
+
+            .photo-options {
+                flex-direction: column;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .auth-container {
+                padding: 10px;
+            }
+
+            .header-left {
+                gap: 10px;
+            }
+
+            .user-info {
+                display: none;
+            }
+
+            .auth-body {
+                padding: 20px 16px;
+            }
+
+            .auth-header {
+                padding: 30px 16px 20px;
+            }
+        }
+
+        /* Animation */
+        .fade-in {
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .slide-in {
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Utility Classes */
+        .hidden {
+            display: none !important;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .mb-4 {
+            margin-bottom: 24px;
+        }
+
+        .mt-4 {
+            margin-top: 24px;
+        }
+
+        .mt-2 {
+            margin-top: 12px;
+        }
+
+        .mb-2 {
+            margin-bottom: 12px;
+        }
+
+        .w-100 {
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div class="loading-screen">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Menyiapkan Smart Mudarris...</div>
+    </div>
+
+    <!-- Camera Modal -->
+    <div class="camera-container" id="camera-container">
+        <div class="camera-preview">
+            <video id="camera-preview" autoplay></video>
+        </div>
+        <div class="camera-controls">
+            <button class="btn btn-secondary btn-small" id="capture-btn">
+                <i class="fas fa-camera"></i> Ambil Foto
+            </button>
+            <button class="btn btn-secondary btn-small" id="cancel-camera-btn">
+                <i class="fas fa-times"></i> Batal
+            </button>
+        </div>
+    </div>
+
+    <!-- Auth Container -->
+    <div class="auth-container" id="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="logo">
+                    <div class="logo-icon">
+                        <i class="fas fa-graduation-cap"></i>
+                    </div>
+                    <div class="logo-text">Smart Mudarris</div>
+                </div>
+                <h1 class="auth-title" id="auth-form-title">Masuk ke Akun Anda</h1>
+                <p class="auth-subtitle" id="auth-form-subtitle">Platform digital terpadu untuk guru madrasah</p>
+            </div>
+
+            <div class="auth-body">
+                <!-- Alert Messages -->
+                <div class="alert alert-error hidden" id="alert-error">
+                    <i class="fas fa-exclamation-circle alert-icon"></i>
+                    <div class="alert-content">
+                        <div class="alert-title">Terjadi Kesalahan</div>
+                        <div class="alert-message" id="alert-error-message"></div>
+                    </div>
+                </div>
+
+                <div class="alert alert-success hidden" id="alert-success">
+                    <i class="fas fa-check-circle alert-icon"></i>
+                    <div class="alert-content">
+                        <div class="alert-title">Berhasil</div>
+                        <div class="alert-message" id="alert-success-message"></div>
+                    </div>
+                </div>
+
+                <!-- Login Form -->
+                <form class="auth-form" id="login-form">
+                    <div class="form-group">
+                        <label class="form-label required" for="login-email">Email</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-envelope input-icon"></i>
+                            <input type="email" class="form-input" id="login-email" placeholder="email@madrasah.sch.id" required>
+                        </div>
+                        <div class="validation-message error hidden" id="login-email-error"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label required" for="login-password">Password</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-lock input-icon"></i>
+                            <input type="password" class="form-input" id="login-password" placeholder="Masukkan password" required>
+                            <button type="button" class="password-toggle" id="toggle-login-password">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                        <div class="validation-message error hidden" id="login-password-error"></div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" id="login-btn">
+                        <i class="fas fa-sign-in-alt"></i>
+                        <span>Masuk ke Dashboard</span>
+                    </button>
+
+                    <div class="text-center mt-4">
+                        <a href="#" class="auth-link" id="forgot-password-link">Lupa password?</a>
+                        <span class="text-muted"> • </span>
+                        <a href="#" class="auth-link" id="show-signup-form">Buat akun baru</a>
+                    </div>
+                </form>
+
+                <!-- Signup Form -->
+                <form class="auth-form hidden" id="signup-form">
+                    <div class="signup-progress" id="signup-progress">
+                        <div class="progress-step active" data-step="1">
+                            <div class="step-number">1</div>
+                            <div class="step-label">Data Dasar</div>
+                        </div>
+                        <div class="progress-step" data-step="2">
+                            <div class="step-number">2</div>
+                            <div class="step-label">Data Profesional</div>
+                        </div>
+                        <div class="progress-step" data-step="3">
+                            <div class="step-number">3</div>
+                            <div class="step-label">Pengaturan</div>
+                        </div>
+                    </div>
+
+                    <!-- Step 1: Basic Data -->
+                    <div class="signup-step active" data-step="1">
+                        <div class="form-section">
+                            <h3 class="form-section-title"><i class="fas fa-user"></i> Data Diri</h3>
+                            
+                            <div class="form-group">
+                                <label class="form-label required" for="signup-name">Nama Lengkap</label>
+                                <div class="input-wrapper">
+                                    <i class="fas fa-user input-icon"></i>
+                                    <input type="text" class="form-input" id="signup-name" placeholder="Nama lengkap Anda" required>
+                                </div>
+                                <div class="validation-message error hidden" id="signup-name-error"></div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label required" for="signup-email">Email Institusi</label>
+                                <div class="input-wrapper">
+                                    <i class="fas fa-envelope input-icon"></i>
+                                    <input type="email" class="form-input" id="signup-email" placeholder="email@madrasah.sch.id" required>
+                                </div>
+                                <div class="validation-message error hidden" id="signup-email-error"></div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label required" for="signup-password">Password</label>
+                                    <div class="input-wrapper">
+                                        <i class="fas fa-lock input-icon"></i>
+                                        <input type="password" class="form-input" id="signup-password" placeholder="Minimal 8 karakter" required minlength="8">
+                                        <button type="button" class="password-toggle" id="toggle-signup-password">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                    <div class="password-strength" id="password-strength">
+                                        <div class="password-strength-bar"></div>
+                                    </div>
+                                    <div class="validation-message error hidden" id="signup-password-error"></div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label required" for="signup-confirm-password">Konfirmasi Password</label>
+                                    <div class="input-wrapper">
+                                        <i class="fas fa-lock input-icon"></i>
+                                        <input type="password" class="form-input" id="signup-confirm-password" placeholder="Ulangi password" required>
+                                        <button type="button" class="password-toggle" id="toggle-signup-confirm-password">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                    <div class="validation-message error hidden" id="signup-confirm-error"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-buttons">
+                            <button type="button" class="btn btn-primary" id="next-step-1">
+                                Lanjut <i class="fas fa-arrow-right"></i>
+                            </button>
+                            <div class="text-center mt-4">
+                                <a href="#" class="auth-link" id="show-login-form-from-signup">Sudah punya akun? Masuk</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Professional Data -->
+                    <div class="signup-step hidden" data-step="2">
+                        <div class="form-section">
+                            <h3 class="form-section-title"><i class="fas fa-briefcase"></i> Data Profesional</h3>
+                            
+                            <div class="form-group">
+                                <label class="form-label" for="signup-nuptk">NUPTK / NIP</label>
+                                <div class="input-wrapper">
+                                    <i class="fas fa-id-card input-icon"></i>
+                                    <input type="text" class="form-input" id="signup-nuptk" placeholder="16 digit angka (opsional)" maxlength="16">
+                                </div>
+                                <div class="validation-message warning hidden" id="signup-nuptk-error">Format NUPTK: 16 digit angka</div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label required" for="signup-school">Nama Sekolah / Madrasah</label>
+                                <div class="input-wrapper">
+                                    <i class="fas fa-school input-icon"></i>
+                                    <input type="text" class="form-input" id="signup-school" placeholder="Nama lengkap sekolah" required>
+                                </div>
+                                <div class="validation-message error hidden" id="signup-school-error"></div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label required">Jenis Peran Guru</label>
+                                <div class="radio-group" id="teacher-role">
+                                    <label class="radio-option">
+                                        <input type="radio" name="teacher-role" value="umum" checked>
+                                        <span class="radio-input"></span>
+                                        <span class="radio-text">Guru Umum</span>
+                                    </label>
+                                    <label class="radio-option">
+                                        <input type="radio" name="teacher-role" value="kelas">
+                                        <span class="radio-input"></span>
+                                        <span class="radio-text">Guru Kelas / Wali Kelas</span>
+                                    </label>
+                                    <label class="radio-option">
+                                        <input type="radio" name="teacher-role" value="mapel">
+                                        <span class="radio-input"></span>
+                                        <span class="radio-text">Guru Mata Pelajaran</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Conditional Fields: Guru Kelas -->
+                            <div class="conditional-field" id="kelas-fields">
+                                <div class="form-group">
+                                    <label class="form-label required">Kelas yang Diampu</label>
+                                    <div class="dynamic-input-group" id="kelas-inputs">
+                                        <div class="dynamic-input-row">
+                                            <div class="input-wrapper dynamic-input">
+                                                <i class="fas fa-chalkboard-teacher input-icon"></i>
+                                                <input type="text" class="form-input small" placeholder="Contoh: Kelas 1A" data-index="0">
+                                            </div>
+                                            <button type="button" class="btn-add" id="add-kelas">
+                                                <i class="fas fa-plus"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="validation-message error hidden" id="kelas-error"></div>
+                                </div>
+                            </div>
+
+                            <!-- Conditional Fields: Guru Mapel -->
+                            <div class="conditional-field" id="mapel-fields">
+                                <div class="form-group">
+                                    <label class="form-label required">Mata Pelajaran</label>
+                                    <div class="dynamic-input-group" id="mapel-inputs">
+                                        <div class="dynamic-input-row">
+                                            <div class="input-wrapper dynamic-input">
+                                                <i class="fas fa-book input-icon"></i>
+                                                <input type="text" class="form-input small" placeholder="Contoh: Matematika" data-index="0">
+                                            </div>
+                                            <button type="button" class="btn-add" id="add-mapel">
+                                                <i class="fas fa-plus"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="validation-message error hidden" id="mapel-error"></div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label required">Kelas yang Diajar</label>
+                                    <div class="dynamic-input-group" id="mapel-kelas-inputs">
+                                        <div class="dynamic-input-row">
+                                            <div class="input-wrapper dynamic-input">
+                                                <i class="fas fa-chalkboard input-icon"></i>
+                                                <input type="text" class="form-input small" placeholder="Contoh: 1A" data-index="0">
+                                            </div>
+                                            <button type="button" class="btn-add" id="add-mapel-kelas">
+                                                <i class="fas fa-plus"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="validation-message error hidden" id="mapel-kelas-error"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-buttons">
+                            <div class="form-row">
+                                <button type="button" class="btn btn-secondary" id="prev-step-2">
+                                    <i class="fas fa-arrow-left"></i> Kembali
+                                </button>
+                                <button type="button" class="btn btn-primary" id="next-step-2">
+                                    Lanjut <i class="fas fa-arrow-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Additional Settings -->
+                    <div class="signup-step hidden" data-step="3">
+                        <div class="form-section">
+                            <h3 class="form-section-title"><i class="fas fa-id-card"></i> Informasi Tambahan</h3>
+                            
+                            <div class="form-group">
+                                <label class="form-label" for="signup-whatsapp">Nomor WhatsApp</label>
+                                <div class="input-wrapper">
+                                    <i class="fab fa-whatsapp input-icon"></i>
+                                    <input type="text" class="form-input" id="signup-whatsapp" placeholder="+62xxx atau 08xxx">
+                                </div>
+                                <div class="validation-message warning hidden" id="whatsapp-error">Format: +62xxx atau 08xxx</div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Foto Profil</label>
+                                <div class="photo-upload-group">
+                                    <div class="photo-preview" id="photo-preview">
+                                        <div class="photo-placeholder">
+                                            <i class="fas fa-user-circle"></i>
+                                            <span>Belum ada foto</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="photo-options">
+                                        <button type="button" class="btn-photo" id="upload-photo-btn">
+                                            <i class="fas fa-upload"></i> Unggah File
+                                            <input type="file" id="photo-file" accept="image/jpeg,image/png" hidden>
+                                        </button>
+                                        <button type="button" class="btn-photo" id="selfie-btn">
+                                            <i class="fas fa-camera"></i> Ambil Selfie
+                                        </button>
+                                    </div>
+                                    <div class="validation-message warning hidden" id="photo-error">Maksimal 2 MB (JPG/PNG)</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h3 class="form-section-title"><i class="fas fa-cog"></i> Pengaturan Sistem</h3>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Tema Tampilan</label>
+                                <div class="theme-toggle-group" id="theme-toggle">
+                                    <div class="theme-option active" data-theme="dark">
+                                        <i class="fas fa-moon theme-icon"></i>
+                                        <span class="theme-label">Dark</span>
+                                    </div>
+                                    <div class="theme-option" data-theme="light">
+                                        <i class="fas fa-sun theme-icon"></i>
+                                        <span class="theme-label">Light</span>
+                                    </div>
+                                    <div class="theme-option" data-theme="system">
+                                        <i class="fas fa-desktop theme-icon"></i>
+                                        <span class="theme-label">Sistem</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Notifikasi</label>
+                                <div class="checkbox-group" id="notification-prefs">
+                                    <label class="checkbox-option">
+                                        <input type="checkbox" name="notifications" value="email" checked>
+                                        <span class="checkbox-input"></span>
+                                        <span class="checkbox-text">Email</span>
+                                    </label>
+                                    <label class="checkbox-option" id="whatsapp-notif-option">
+                                        <input type="checkbox" name="notifications" value="whatsapp">
+                                        <span class="checkbox-input"></span>
+                                        <span class="checkbox-text">WhatsApp</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-buttons">
+                            <div class="form-row">
+                                <button type="button" class="btn btn-secondary" id="prev-step-3">
+                                    <i class="fas fa-arrow-left"></i> Kembali
+                                </button>
+                                <button type="submit" class="btn btn-primary" id="signup-btn">
+                                    <i class="fas fa-user-plus"></i>
+                                    <span>Buat Akun</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Forgot Password Form -->
+                <form class="auth-form hidden" id="forgot-password-form">
+                    <div class="form-group">
+                        <label class="form-label required" for="forgot-email">Email</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-envelope input-icon"></i>
+                            <input type="email" class="form-input" id="forgot-email" placeholder="email@madrasah.sch.id" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" id="reset-btn">
+                        <i class="fas fa-paper-plane"></i>
+                        <span>Kirim Link Reset</span>
+                    </button>
+
+                    <div class="text-center mt-4">
+                        <a href="#" class="auth-link" id="show-login-form-from-forgot">Kembali ke halaman masuk</a>
+                    </div>
+                </form>
+            </div>
+
+            <div class="auth-footer">
+                © 2024 Smart Mudarris. Platform digital terpadu untuk guru madrasah.
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard Container -->
+    <div class="dashboard-container hidden" id="dashboard-container">
+        <header class="dashboard-header">
+            <div class="header-left">
+                <button class="sidebar-toggle" id="sidebar-toggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="logo">
+                    <div class="logo-icon" style="width: 36px; height: 36px; margin-right: 8px;">
+                        <i class="fas fa-graduation-cap"></i>
+                    </div>
+                    <div class="logo-text">Smart Mudarris</div>
+                </div>
+            </div>
+
+            <div class="user-menu">
+                <div class="user-info">
+                    <div class="user-name" id="dashboard-username">Guru Madrasah</div>
+                    <div class="user-role" id="dashboard-role">Pengajar</div>
+                </div>
+                <div class="user-avatar" id="user-avatar">
+                    <i class="fas fa-user"></i>
+                </div>
+                <button class="logout-btn" id="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </header>
+
+        <div class="dashboard-main">
+            <aside class="dashboard-sidebar" id="dashboard-sidebar">
+                <nav class="sidebar-nav">
+                    <a href="#" class="nav-item active">
+                        <i class="fas fa-home"></i>
+                        <span>Dashboard</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-users"></i>
+                        <span>Manajemen Siswa</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-calendar-check"></i>
+                        <span>Absensi Digital</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-file-alt"></i>
+                        <span>Ujian Online</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Penilaian & Raport</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-download"></i>
+                        <span>Ekspor Data</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <i class="fas fa-cog"></i>
+                        <span>Pengaturan</span>
+                    </a>
+                </nav>
+            </aside>
+
+            <main class="dashboard-content">
+                <div class="teacher-info-card fade-in">
+                    <div class="teacher-avatar-large" id="dashboard-avatar-large">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="teacher-details">
+                        <h3 id="dashboard-fullname">Nama Guru</h3>
+                        <p id="dashboard-email">email@madrasah.sch.id</p>
+                        <div class="teacher-meta">
+                            <div class="meta-item">
+                                <i class="fas fa-school"></i>
+                                <span id="dashboard-school">Nama Sekolah</span>
+                            </div>
+                            <div class="meta-item">
+                                <i class="fas fa-id-card"></i>
+                                <span id="dashboard-nuptk">NUPTK: -</span>
+                            </div>
+                            <div class="meta-item">
+                                <i class="fas fa-user-tag"></i>
+                                <span id="dashboard-teacher-role">Peran</span>
+                            </div>
+                        </div>
+                        <div class="teacher-meta mt-2" id="dashboard-classes-info"></div>
+                    </div>
+                </div>
+
+                <div class="welcome-section fade-in">
+                    <h1 class="welcome-title">Selamat Datang, <span id="welcome-username">Guru</span></h1>
+                    <p class="welcome-subtitle">Kelola tugas administratif dan akademik dengan mudah</p>
+                </div>
+
+                <div class="stats-grid fade-in">
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-icon students">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="stat-trend">
+                                <i class="fas fa-arrow-up" style="color: var(--success);"></i>
+                                <span style="color: var(--success); font-size: 14px;">+12%</span>
+                            </div>
+                        </div>
+                        <div class="stat-value">0</div>
+                        <div class="stat-label">Total Siswa</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-icon attendance">
+                                <i class="fas fa-calendar-check"></i>
+                            </div>
+                            <div class="stat-trend">
+                                <i class="fas fa-arrow-up" style="color: var(--success);"></i>
+                                <span style="color: var(--success); font-size: 14px;">+5%</span>
+                            </div>
+                        </div>
+                        <div class="stat-value">0%</div>
+                        <div class="stat-label">Rata-rata Kehadiran</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-icon exams">
+                                <i class="fas fa-file-alt"></i>
+                            </div>
+                            <div class="stat-trend">
+                                <i class="fas fa-arrow-down" style="color: var(--error);"></i>
+                                <span style="color: var(--error); font-size: 14px;">-2</span>
+                            </div>
+                        </div>
+                        <div class="stat-value">0</div>
+                        <div class="stat-label">Ujian Aktif</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-icon reports">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <div class="stat-trend">
+                                <i class="fas fa-arrow-up" style="color: var(--success);"></i>
+                                <span style="color: var(--success); font-size: 14px;">+18%</span>
+                            </div>
+                        </div>
+                        <div class="stat-value">0</div>
+                        <div class="stat-label">Raport Terbit</div>
+                    </div>
+                </div>
+
+                <div class="modules-grid fade-in">
+                    <div class="module-card">
+                        <div class="module-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <h3 class="module-title">Manajemen Siswa</h3>
+                        <p class="module-description">Kelola data siswa, kelas, dan informasi akademik secara digital dengan antarmuka yang intuitif.</p>
+                        <a href="#" class="module-link">
+                            <span>Akses Modul</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+
+                    <div class="module-card">
+                        <div class="module-icon">
+                            <i class="fas fa-calendar-check"></i>
+                        </div>
+                        <h3 class="module-title">Absensi Digital</h3>
+                        <p class="module-description">Catat kehadiran harian, buat laporan bulanan, dan pantau tingkat kehadiran siswa.</p>
+                        <a href="#" class="module-link">
+                            <span>Akses Modul</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+
+                    <div class="module-card">
+                        <div class="module-icon">
+                            <i class="fas fa-file-alt"></i>
+                        </div>
+                        <h3 class="module-title">Ujian Online</h3>
+                        <p class="module-description">Buat ujian dengan berbagai jenis soal, penilaian otomatis, dan analisis hasil.</p>
+                        <a href="#" class="module-link">
+                            <span>Akses Modul</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Supabase Integration -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script>
+        // Konfigurasi Supabase - GANTI DENGAN KONFIGURASI ANDA
+        const SUPABASE_URL = 'https://mchemidupcgoqwmzpzwj.supabase.co'; // Ganti dengan URL Supabase Anda
+        const SUPABASE_ANON_KEY = 'sb_publishable_hjn7xY3KwMfpTtfT8Q6ttQ_j196A29n'; // Ganti dengan anon key Anda
+
+        // Inisialisasi Supabase
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Status pendaftaran (true untuk aktif)
+        const SIGNUP_ENABLED = true;
+
+        // State aplikasi
+        let currentUser = null;
+        let currentTeacher = null;
+        let currentStep = 1;
+        let photoFile = null;
+        let photoUrl = null;
+        let stream = null;
+
+        // DOM Elements
+        const loadingScreen = document.querySelector('.loading-screen');
+        const authContainer = document.getElementById('auth-container');
+        const dashboardContainer = document.getElementById('dashboard-container');
+        const cameraContainer = document.getElementById('camera-container');
+        const cameraPreview = document.getElementById('camera-preview');
+        const captureBtn = document.getElementById('capture-btn');
+        const cancelCameraBtn = document.getElementById('cancel-camera-btn');
+        
+        // Form containers
+        const loginForm = document.getElementById('login-form');
+        const signupForm = document.getElementById('signup-form');
+        const forgotPasswordForm = document.getElementById('forgot-password-form');
+        
+        // Progress steps
+        const signupProgress = document.getElementById('signup-progress');
+        const signupSteps = document.querySelectorAll('.signup-step');
+        const progressSteps = document.querySelectorAll('.progress-step');
+        
+        // Alert elements
+        const alertError = document.getElementById('alert-error');
+        const alertSuccess = document.getElementById('alert-success');
+        const alertErrorMessage = document.getElementById('alert-error-message');
+        const alertSuccessMessage = document.getElementById('alert-success-message');
+        
+        // Buttons and links
+        const showSignupFormBtn = document.getElementById('show-signup-form');
+        const showLoginFormBtn = document.getElementById('show-login-form-from-signup');
+        const showLoginFormFromForgotBtn = document.getElementById('show-login-form-from-forgot');
+        const forgotPasswordLink = document.getElementById('forgot-password-link');
+        const logoutBtn = document.getElementById('logout-btn');
+        const sidebarToggle = document.getElementById('sidebar-toggle');
+        const dashboardSidebar = document.getElementById('dashboard-sidebar');
+        
+        // Step navigation buttons
+        const nextStep1Btn = document.getElementById('next-step-1');
+        const prevStep2Btn = document.getElementById('prev-step-2');
+        const nextStep2Btn = document.getElementById('next-step-2');
+        const prevStep3Btn = document.getElementById('prev-step-3');
+        const signupBtn = document.getElementById('signup-btn');
+        
+        // Dynamic input buttons
+        const addKelasBtn = document.getElementById('add-kelas');
+        const addMapelBtn = document.getElementById('add-mapel');
+        const addMapelKelasBtn = document.getElementById('add-mapel-kelas');
+        
+        // Photo upload
+        const photoPreview = document.getElementById('photo-preview');
+        const uploadPhotoBtn = document.getElementById('upload-photo-btn');
+        const selfieBtn = document.getElementById('selfie-btn');
+        const photoFileInput = document.getElementById('photo-file');
+        
+        // Theme toggle
+        const themeOptions = document.querySelectorAll('.theme-option');
+        
+        // User display elements
+        const dashboardUsername = document.getElementById('dashboard-username');
+        const dashboardRole = document.getElementById('dashboard-role');
+        const dashboardFullname = document.getElementById('dashboard-fullname');
+        const dashboardEmail = document.getElementById('dashboard-email');
+        const dashboardSchool = document.getElementById('dashboard-school');
+        const dashboardNuptk = document.getElementById('dashboard-nuptk');
+        const dashboardTeacherRole = document.getElementById('dashboard-teacher-role');
+        const dashboardClassesInfo = document.getElementById('dashboard-classes-info');
+        const welcomeUsername = document.getElementById('welcome-username');
+        const userAvatar = document.getElementById('user-avatar');
+        const dashboardAvatarLarge = document.getElementById('dashboard-avatar-large');
+        const authFormTitle = document.getElementById('auth-form-title');
+        const authFormSubtitle = document.getElementById('auth-form-subtitle');
+
+        // Inisialisasi aplikasi
+        async function initApp() {
+            // Hide loading screen setelah 1.5 detik
+            setTimeout(() => {
+                loadingScreen.style.opacity = '0';
+                setTimeout(() => {
+                    loadingScreen.style.display = 'none';
+                }, 500);
+            }, 1500);
+
+            // Cek session user dari Supabase
+            const { data: { session } } = await supabase.auth.getSession();
+            
+            if (session) {
+                currentUser = session.user;
+                await loadUserProfile();
+                showDashboard();
+            } else {
+                showAuth();
+                setupAuthForms();
+            }
+
+            // Setup event listeners
+            setupEventListeners();
+            
+            // Setup dynamic inputs
+            setupDynamicInputs();
+            
+            // Setup conditional fields
+            setupConditionalFields();
+            
+            // Setup photo upload
+            setupPhotoUpload();
+            
+            // Setup camera
+            setupCamera();
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Sidebar toggle untuk mobile
+            sidebarToggle.addEventListener('click', () => {
+                dashboardSidebar.classList.toggle('active');
+            });
+
+            // Navigation links
+            showSignupFormBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (!SIGNUP_ENABLED) {
+                    showAlert('error', 'Pendaftaran saat ini hanya untuk pengguna internal. Hubungi admin untuk akses.');
+                    return;
+                }
+                showForm('signup');
+                resetSignupForm();
+            });
+
+            showLoginFormBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                showForm('login');
+            });
+
+            showLoginFormFromForgotBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                showForm('login');
+            });
+
+            forgotPasswordLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                showForm('forgot');
+            });
+
+            // Logout
+            logoutBtn.addEventListener('click', handleLogout);
+
+            // Step navigation
+            nextStep1Btn.addEventListener('click', validateStep1);
+            prevStep2Btn.addEventListener('click', () => goToStep(1));
+            nextStep2Btn.addEventListener('click', validateStep2);
+            prevStep3Btn.addEventListener('click', () => goToStep(2));
+            
+            // Theme toggle
+            themeOptions.forEach(option => {
+                option.addEventListener('click', () => {
+                    themeOptions.forEach(opt => opt.classList.remove('active'));
+                    option.classList.add('active');
+                });
+            });
+            
+            // WhatsApp notification toggle
+            const whatsappInput = document.getElementById('signup-whatsapp');
+            const whatsappNotifOption = document.getElementById('whatsapp-notif-option');
+            
+            whatsappInput.addEventListener('input', () => {
+                const whatsappValue = whatsappInput.value.trim();
+                if (whatsappValue) {
+                    whatsappNotifOption.style.display = 'flex';
+                } else {
+                    whatsappNotifOption.style.display = 'none';
+                    const whatsappCheckbox = whatsappNotifOption.querySelector('input');
+                    whatsappCheckbox.checked = false;
+                }
+            });
+            
+            // Real-time validation
+            setupRealTimeValidation();
+        }
+
+        // Setup dynamic inputs
+        function setupDynamicInputs() {
+            // Add kelas input
+            addKelasBtn.addEventListener('click', () => {
+                addDynamicInput('kelas-inputs', 'Kelas', 'fa-chalkboard-teacher', 'Contoh: Kelas 2B');
+            });
+            
+            // Add mapel input
+            addMapelBtn.addEventListener('click', () => {
+                addDynamicInput('mapel-inputs', 'Mata Pelajaran', 'fa-book', 'Contoh: IPA');
+            });
+            
+            // Add mapel kelas input
+            addMapelKelasBtn.addEventListener('click', () => {
+                addDynamicInput('mapel-kelas-inputs', 'Kelas', 'fa-chalkboard', 'Contoh: 2B');
+            });
+        }
+
+        // Setup conditional fields
+        function setupConditionalFields() {
+            const roleInputs = document.querySelectorAll('input[name="teacher-role"]');
+            
+            roleInputs.forEach(input => {
+                input.addEventListener('change', () => {
+                    const role = input.value;
+                    
+                    // Hide all conditional fields
+                    document.getElementById('kelas-fields').classList.remove('show');
+                    document.getElementById('mapel-fields').classList.remove('show');
+                    
+                    // Show relevant fields
+                    if (role === 'kelas') {
+                        document.getElementById('kelas-fields').classList.add('show');
+                    } else if (role === 'mapel') {
+                        document.getElementById('mapel-fields').classList.add('show');
+                    }
+                });
+            });
+        }
+
+        // Setup photo upload
+        function setupPhotoUpload() {
+            // File upload
+            uploadPhotoBtn.addEventListener('click', () => {
+                photoFileInput.click();
+            });
+            
+            photoFileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    validateAndPreviewPhoto(file);
+                }
+            });
+            
+            // Selfie button
+            selfieBtn.addEventListener('click', openCamera);
+            
+            // Capture photo
+            captureBtn.addEventListener('click', capturePhoto);
+            
+            // Cancel camera
+            cancelCameraBtn.addEventListener('click', closeCamera);
+        }
+
+        // Setup camera
+        function setupCamera() {
+            // Camera setup is done in openCamera function
+        }
+
+        // Setup real-time validation
+        function setupRealTimeValidation() {
+            // Password strength
+            const passwordInput = document.getElementById('signup-password');
+            const passwordStrength = document.getElementById('password-strength');
+            
+            passwordInput.addEventListener('input', () => {
+                const password = passwordInput.value;
+                checkPasswordStrength(password, passwordStrength);
+                
+                // Confirm password validation
+                const confirmPassword = document.getElementById('signup-confirm-password').value;
+                if (confirmPassword) {
+                    validateConfirmPassword();
+                }
+            });
+            
+            // Confirm password
+            const confirmInput = document.getElementById('signup-confirm-password');
+            confirmInput.addEventListener('input', validateConfirmPassword);
+            
+            // NUPTK validation
+            const nuptkInput = document.getElementById('signup-nuptk');
+            nuptkInput.addEventListener('input', () => {
+                validateNuptk(nuptkInput.value);
+            });
+            
+            // WhatsApp validation
+            const whatsappInput = document.getElementById('signup-whatsapp');
+            whatsappInput.addEventListener('input', () => {
+                validateWhatsapp(whatsappInput.value);
+            });
+            
+            // Email validation
+            const emailInput = document.getElementById('signup-email');
+            emailInput.addEventListener('blur', () => {
+                validateEmail(emailInput.value);
+            });
+        }
+
+        // Add dynamic input field
+        function addDynamicInput(containerId, placeholder, iconClass, example) {
+            const container = document.getElementById(containerId);
+            const rows = container.querySelectorAll('.dynamic-input-row');
+            const index = rows.length;
+            
+            const row = document.createElement('div');
+            row.className = 'dynamic-input-row';
+            row.innerHTML = `
+                <div class="input-wrapper dynamic-input">
+                    <i class="fas ${iconClass} input-icon"></i>
+                    <input type="text" class="form-input small" placeholder="${example}" data-index="${index}">
+                </div>
+                <button type="button" class="btn-remove remove-input">
+                    <i class="fas fa-minus"></i>
+                </button>
+            `;
+            
+            container.appendChild(row);
+            
+            // Add remove event listener
+            const removeBtn = row.querySelector('.remove-input');
+            removeBtn.addEventListener('click', () => {
+                if (rows.length > 1) {
+                    row.remove();
+                } else {
+                    showAlert('warning', 'Minimal satu input harus diisi');
+                }
+            });
+        }
+
+        // Validate step 1
+        function validateStep1() {
+            const name = document.getElementById('signup-name').value.trim();
+            const email = document.getElementById('signup-email').value.trim();
+            const password = document.getElementById('signup-password').value;
+            const confirmPassword = document.getElementById('signup-confirm-password').value;
+            
+            let isValid = true;
+            
+            // Reset errors
+            hideValidationMessages();
+            
+            // Validate name
+            if (!name) {
+                showValidationError('signup-name-error', 'Nama lengkap harus diisi');
+                isValid = false;
+            }
+            
+            // Validate email
+            if (!email) {
+                showValidationError('signup-email-error', 'Email institusi harus diisi');
+                isValid = false;
+            } else if (!isValidEmail(email)) {
+                showValidationError('signup-email-error', 'Format email tidak valid');
+                isValid = false;
+            }
+            
+            // Validate password
+            if (!password) {
+                showValidationError('signup-password-error', 'Password harus diisi');
+                isValid = false;
+            } else if (password.length < 8) {
+                showValidationError('signup-password-error', 'Password minimal 8 karakter');
+                isValid = false;
+            }
+            
+            // Validate confirm password
+            if (!confirmPassword) {
+                showValidationError('signup-confirm-error', 'Konfirmasi password harus diisi');
+                isValid = false;
+            } else if (password !== confirmPassword) {
+                showValidationError('signup-confirm-error', 'Password tidak cocok');
+                isValid = false;
+            }
+            
+            if (isValid) {
+                goToStep(2);
+            }
+        }
+
+        // Validate step 2
+        function validateStep2() {
+            const school = document.getElementById('signup-school').value.trim();
+            const role = document.querySelector('input[name="teacher-role"]:checked').value;
+            
+            let isValid = true;
+            
+            // Reset errors
+            hideValidationMessages();
+            
+            // Validate school
+            if (!school) {
+                showValidationError('signup-school-error', 'Nama sekolah harus diisi');
+                isValid = false;
+            }
+            
+            // Validate conditional fields
+            if (role === 'kelas') {
+                const kelasInputs = document.querySelectorAll('#kelas-inputs input');
+                const kelasValues = Array.from(kelasInputs).map(input => input.value.trim()).filter(val => val);
+                
+                if (kelasValues.length === 0) {
+                    showValidationError('kelas-error', 'Minimal satu kelas harus diisi');
+                    isValid = false;
+                }
+            } else if (role === 'mapel') {
+                const mapelInputs = document.querySelectorAll('#mapel-inputs input');
+                const mapelValues = Array.from(mapelInputs).map(input => input.value.trim()).filter(val => val);
+                
+                const mapelKelasInputs = document.querySelectorAll('#mapel-kelas-inputs input');
+                const mapelKelasValues = Array.from(mapelKelasInputs).map(input => input.value.trim()).filter(val => val);
+                
+                if (mapelValues.length === 0) {
+                    showValidationError('mapel-error', 'Minimal satu mata pelajaran harus diisi');
+                    isValid = false;
+                }
+                
+                if (mapelKelasValues.length === 0) {
+                    showValidationError('mapel-kelas-error', 'Minimal satu kelas harus diisi');
+                    isValid = false;
+                }
+            }
+            
+            if (isValid) {
+                goToStep(3);
+            }
+        }
+
+        // Go to specific step
+        function goToStep(step) {
+            // Update current step
+            currentStep = step;
+            
+            // Hide all steps
+            signupSteps.forEach(stepEl => {
+                stepEl.classList.remove('active');
+                stepEl.classList.add('hidden');
+            });
+            
+            // Show current step
+            const currentStepEl = document.querySelector(`.signup-step[data-step="${step}"]`);
+            currentStepEl.classList.remove('hidden');
+            currentStepEl.classList.add('active');
+            
+            // Update progress
+            progressSteps.forEach(stepEl => {
+                const stepNumber = parseInt(stepEl.dataset.step);
+                stepEl.classList.remove('active', 'completed');
+                
+                if (stepNumber < step) {
+                    stepEl.classList.add('completed');
+                } else if (stepNumber === step) {
+                    stepEl.classList.add('active');
+                }
+            });
+            
+            // Scroll to top of form
+            document.querySelector('.auth-body').scrollTop = 0;
+        }
+
+        // Validate NUPTK
+        function validateNuptk(nuptk) {
+            const errorElement = document.getElementById('signup-nuptk-error');
+            
+            if (!nuptk) {
+                errorElement.classList.add('hidden');
+                return true;
+            }
+            
+            // Check if it's 16 digits
+            const nuptkRegex = /^\d{16}$/;
+            if (!nuptkRegex.test(nuptk)) {
+                errorElement.classList.remove('hidden');
+                return false;
+            }
+            
+            errorElement.classList.add('hidden');
+            return true;
+        }
+
+        // Validate WhatsApp number
+        function validateWhatsapp(whatsapp) {
+            const errorElement = document.getElementById('whatsapp-error');
+            
+            if (!whatsapp) {
+                errorElement.classList.add('hidden');
+                return true;
+            }
+            
+            // Check if it starts with +62 or 08
+            const whatsappRegex = /^(?:\+62|0)[0-9]{9,12}$/;
+            if (!whatsappRegex.test(whatsapp)) {
+                errorElement.classList.remove('hidden');
+                return false;
+            }
+            
+            errorElement.classList.add('hidden');
+            return true;
+        }
+
+        // Validate email
+        function validateEmail(email) {
+            const errorElement = document.getElementById('signup-email-error');
+            
+            if (!isValidEmail(email)) {
+                showValidationError('signup-email-error', 'Format email tidak valid');
+                return false;
+            }
+            
+            // Optional: Check for institutional domain
+            const institutionalDomains = ['madrasah.sch.id', 'kemenag.go.id', 'sekolahislam.id'];
+            const domain = email.split('@')[1];
+            
+            if (domain && !institutionalDomains.some(d => domain.endsWith(d))) {
+                showValidationError('signup-email-error', 'Disarankan menggunakan email institusi');
+                return false;
+            }
+            
+            errorElement.classList.add('hidden');
+            return true;
+        }
+
+        // Check password strength
+        function checkPasswordStrength(password, strengthElement) {
+            let strength = 0;
+            
+            if (password.length >= 8) strength++;
+            if (/[A-Z]/.test(password)) strength++;
+            if (/[a-z]/.test(password)) strength++;
+            if (/[0-9]/.test(password)) strength++;
+            if (/[^A-Za-z0-9]/.test(password)) strength++;
+            
+            strengthElement.className = 'password-strength';
+            
+            if (password.length === 0) {
+                return;
+            } else if (strength <= 2) {
+                strengthElement.classList.add('weak');
+            } else if (strength <= 4) {
+                strengthElement.classList.add('medium');
+            } else {
+                strengthElement.classList.add('strong');
+            }
+        }
+
+        // Validate confirm password
+        function validateConfirmPassword() {
+            const password = document.getElementById('signup-password').value;
+            const confirmPassword = document.getElementById('signup-confirm-password').value;
+            const errorElement = document.getElementById('signup-confirm-error');
+            
+            if (!confirmPassword) {
+                errorElement.classList.add('hidden');
+                return false;
+            }
+            
+            if (password !== confirmPassword) {
+                showValidationError('signup-confirm-error', 'Password tidak cocok');
+                return false;
+            }
+            
+            errorElement.classList.add('hidden');
+            return true;
+        }
+
+        // Validate and preview photo
+        function validateAndPreviewPhoto(file) {
+            const errorElement = document.getElementById('photo-error');
+            
+            // Check file type
+            const validTypes = ['image/jpeg', 'image/png'];
+            if (!validTypes.includes(file.type)) {
+                showValidationError('photo-error', 'Format file harus JPG atau PNG');
+                return false;
+            }
+            
+            // Check file size (max 2MB)
+            const maxSize = 2 * 1024 * 1024; // 2MB in bytes
+            if (file.size > maxSize) {
+                showValidationError('photo-error', 'Ukuran file maksimal 2 MB');
+                return false;
+            }
+            
+            // Preview photo
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                photoPreview.innerHTML = `<img src="${e.target.result}" alt="Preview Foto">`;
+                photoFile = file;
+                photoUrl = e.target.result;
+            };
+            reader.readAsDataURL(file);
+            
+            errorElement.classList.add('hidden');
+            return true;
+        }
+
+        // Open camera for selfie
+        async function openCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: 'user',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    } 
+                });
+                
+                cameraPreview.srcObject = stream;
+                cameraContainer.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+            } catch (error) {
+                console.error('Error accessing camera:', error);
+                showAlert('error', 'Tidak dapat mengakses kamera. Pastikan Anda memberikan izin.');
+            }
+        }
+
+        // Close camera
+        function closeCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            
+            cameraContainer.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        // Capture photo from camera
+        function capturePhoto() {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            
+            canvas.width = cameraPreview.videoWidth;
+            canvas.height = cameraPreview.videoHeight;
+            
+            context.drawImage(cameraPreview, 0, 0, canvas.width, canvas.height);
+            
+            canvas.toBlob((blob) => {
+                const file = new File([blob], 'selfie.jpg', { type: 'image/jpeg' });
+                validateAndPreviewPhoto(file);
+                closeCamera();
+            }, 'image/jpeg', 0.9);
+        }
+
+        // Setup auth forms
+        function setupAuthForms() {
+            // Login form
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await handleLogin();
+            });
+
+            // Signup form
+            signupForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await handleSignup();
+            });
+
+            // Forgot password form
+            forgotPasswordForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await handleForgotPassword();
+            });
+
+            // Password visibility toggle
+            setupPasswordToggles();
+        }
+
+        // Setup password visibility toggles
+        function setupPasswordToggles() {
+            const toggles = [
+                { inputId: 'login-password', toggleId: 'toggle-login-password' },
+                { inputId: 'signup-password', toggleId: 'toggle-signup-password' },
+                { inputId: 'signup-confirm-password', toggleId: 'toggle-signup-confirm-password' }
+            ];
+
+            toggles.forEach(({ inputId, toggleId }) => {
+                const input = document.getElementById(inputId);
+                const toggle = document.getElementById(toggleId);
+                
+                if (toggle) {
+                    toggle.addEventListener('click', () => {
+                        const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+                        input.setAttribute('type', type);
+                        toggle.innerHTML = type === 'password' ? '<i class="fas fa-eye"></i>' : '<i class="fas fa-eye-slash"></i>';
+                    });
+                }
+            });
+        }
+
+        // Handle login
+        async function handleLogin() {
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value;
+            const loginBtn = document.getElementById('login-btn');
+
+            // Validasi input
+            if (!email || !password) {
+                showAlert('error', 'Email dan password harus diisi.');
+                return;
+            }
+
+            // Update button state
+            loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Memproses...</span>';
+            loginBtn.disabled = true;
+
+            try {
+                // Sign in dengan Supabase
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email,
+                    password
+                });
+
+                if (error) throw error;
+
+                // Login berhasil
+                currentUser = data.user;
+                await loadUserProfile();
+                showDashboard();
+                
+                // Reset form
+                loginForm.reset();
+                
+            } catch (error) {
+                showAlert('error', error.message || 'Login gagal. Periksa email dan password Anda.');
+            } finally {
+                // Reset button state
+                loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i><span>Masuk ke Dashboard</span>';
+                loginBtn.disabled = false;
+            }
+        }
+
+        // Handle signup
+        async function handleSignup() {
+            if (!SIGNUP_ENABLED) {
+                showAlert('error', 'Pendaftaran saat ini hanya untuk pengguna internal. Hubungi admin untuk akses.');
+                return;
+            }
+
+            // Collect all data
+            const name = document.getElementById('signup-name').value.trim();
+            const email = document.getElementById('signup-email').value.trim();
+            const password = document.getElementById('signup-password').value;
+            const nuptk = document.getElementById('signup-nuptk').value.trim();
+            const school = document.getElementById('signup-school').value.trim();
+            const role = document.querySelector('input[name="teacher-role"]:checked').value;
+            const whatsapp = document.getElementById('signup-whatsapp').value.trim();
+            
+            // Get theme preference
+            const theme = document.querySelector('.theme-option.active').dataset.theme;
+            
+            // Get notification preferences
+            const notificationCheckboxes = document.querySelectorAll('input[name="notifications"]:checked');
+            const notifications = Array.from(notificationCheckboxes).map(cb => cb.value);
+            
+            // Get conditional data
+            let homeroomClasses = null;
+            let subjects = null;
+            let teachingClasses = null;
+            
+            if (role === 'kelas') {
+                const kelasInputs = document.querySelectorAll('#kelas-inputs input');
+                homeroomClasses = Array.from(kelasInputs).map(input => input.value.trim()).filter(val => val);
+            } else if (role === 'mapel') {
+                const mapelInputs = document.querySelectorAll('#mapel-inputs input');
+                subjects = Array.from(mapelInputs).map(input => input.value.trim()).filter(val => val);
+                
+                const mapelKelasInputs = document.querySelectorAll('#mapel-kelas-inputs input');
+                teachingClasses = Array.from(mapelKelasInputs).map(input => input.value.trim()).filter(val => val);
+            }
+            
+            // Validate all data
+            if (!validateSignupData()) {
+                return;
+            }
+
+            // Update button state
+            signupBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Membuat akun...</span>';
+            signupBtn.disabled = true;
+
+            try {
+                // Step 1: Sign up dengan Supabase Auth
+                const { data: authData, error: authError } = await supabase.auth.signUp({
+                    email,
+                    password,
+                    options: {
+                        data: {
+                            full_name: name,
+                            role: 'teacher'
+                        }
+                    }
+                });
+
+                if (authError) throw authError;
+
+                const user = authData.user;
+                
+                // Step 2: Upload profile photo jika ada
+                let profilePhotoUrl = null;
+                if (photoFile) {
+                    const fileName = `${user.id}_profile.jpg`;
+                    const { error: uploadError } = await supabase.storage
+                        .from('profile-photos')
+                        .upload(fileName, photoFile, { upsert: true });
+                    
+                    if (!uploadError) {
+                        const { data: { publicUrl } } = supabase.storage
+                            .from('profile-photos')
+                            .getPublicUrl(fileName);
+                        profilePhotoUrl = publicUrl;
+                    }
+                }
+                
+                // Step 3: Simpan data ke tabel teachers
+                const { error: insertError } = await supabase.from('teachers').insert({
+                    id: user.id,
+                    full_name: name,
+                    email: email,
+                    nuptk: nuptk || null,
+                    school: school,
+                    role: role,
+                    homeroom_classes: homeroomClasses,
+                    subjects: subjects,
+                    teaching_classes: teachingClasses,
+                    whatsapp: whatsapp || null,
+                    profile_photo_url: profilePhotoUrl,
+                    preferences: {
+                        theme: theme,
+                        notifications: notifications
+                    }
+                });
+
+                if (insertError) throw insertError;
+
+                // Step 4: Auto login
+                const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
+                    email,
+                    password
+                });
+
+                if (loginError) throw loginError;
+
+                // Success
+                currentUser = loginData.user;
+                await loadUserProfile();
+                showDashboard();
+                
+                // Reset form
+                resetSignupForm();
+                
+                // Show success message
+                showAlert('success', 'Akun berhasil dibuat! Anda sekarang masuk ke dashboard.');
+                
+            } catch (error) {
+                console.error('Signup error:', error);
+                showAlert('error', error.message || 'Pendaftaran gagal. Silakan coba lagi.');
+            } finally {
+                // Reset button state
+                signupBtn.innerHTML = '<i class="fas fa-user-plus"></i><span>Buat Akun</span>';
+                signupBtn.disabled = false;
+            }
+        }
+
+        // Validate all signup data
+        function validateSignupData() {
+            let isValid = true;
+            
+            // Validate step 1 data
+            if (!validateStep1()) {
+                goToStep(1);
+                isValid = false;
+            }
+            
+            // Validate step 2 data
+            if (!validateStep2()) {
+                goToStep(2);
+                isValid = false;
+            }
+            
+            // Validate photo
+            if (photoFile) {
+                if (!validateAndPreviewPhoto(photoFile)) {
+                    isValid = false;
+                }
+            }
+            
+            // Validate WhatsApp
+            const whatsapp = document.getElementById('signup-whatsapp').value.trim();
+            if (whatsapp && !validateWhatsapp(whatsapp)) {
+                goToStep(3);
+                isValid = false;
+            }
+            
+            // Validate NUPTK
+            const nuptk = document.getElementById('signup-nuptk').value.trim();
+            if (nuptk && !validateNuptk(nuptk)) {
+                goToStep(2);
+                isValid = false;
+            }
+            
+            return isValid;
+        }
+
+        // Handle forgot password
+        async function handleForgotPassword() {
+            const email = document.getElementById('forgot-email').value.trim();
+            const resetBtn = document.getElementById('reset-btn');
+
+            if (!email) {
+                showAlert('error', 'Email harus diisi.');
+                return;
+            }
+
+            // Update button state
+            resetBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Mengirim...</span>';
+            resetBtn.disabled = true;
+
+            try {
+                // Reset password dengan Supabase
+                const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                    redirectTo: `${window.location.origin}/reset-password.html`,
+                });
+
+                if (error) throw error;
+
+                // Tampilkan pesan sukses
+                showAlert('success', `Tautan reset password telah dikirim ke ${email}. Silakan periksa email Anda.`);
+                
+                // Reset form
+                forgotPasswordForm.reset();
+
+            } catch (error) {
+                showAlert('error', error.message || 'Gagal mengirim email reset. Silakan coba lagi.');
+            } finally {
+                // Reset button state
+                resetBtn.innerHTML = '<i class="fas fa-paper-plane"></i><span>Kirim Link Reset</span>';
+                resetBtn.disabled = false;
+            }
+        }
+
+        // Handle logout
+        async function handleLogout() {
+            try {
+                // Sign out dari Supabase
+                const { error } = await supabase.auth.signOut();
+                
+                if (error) throw error;
+
+                // Reset state
+                currentUser = null;
+                currentTeacher = null;
+                
+                // Kembali ke halaman auth
+                showAuth();
+                showForm('login');
+                
+                // Reset forms
+                loginForm.reset();
+                resetSignupForm();
+                forgotPasswordForm.reset();
+
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+        }
+
+        // Load user profile
+        async function loadUserProfile() {
+            if (!currentUser) return;
+
+            try {
+                // Get teacher data from database
+                const { data: teacherData, error } = await supabase
+                    .from('teachers')
+                    .select('*')
+                    .eq('id', currentUser.id)
+                    .single();
+
+                if (error) throw error;
+
+                currentTeacher = teacherData;
+                
+                // Update UI dengan data teacher
+                const userName = teacherData.full_name || 'Guru Madrasah';
+                const userEmail = teacherData.email || 'email@madrasah.sch.id';
+                const userRole = getRoleDisplayName(teacherData.role);
+                const school = teacherData.school || 'Sekolah Madrasah';
+                const nuptk = teacherData.nuptk ? `NUPTK: ${teacherData.nuptk}` : 'NUPTK: -';
+                
+                // Get avatar initials
+                const initials = userName.split(' ').map(n => n[0]).join('').toUpperCase();
+                
+                // Update dashboard
+                dashboardUsername.textContent = userName;
+                dashboardRole.textContent = userRole;
+                dashboardFullname.textContent = userName;
+                dashboardEmail.textContent = userEmail;
+                dashboardSchool.textContent = school;
+                dashboardNuptk.textContent = nuptk;
+                dashboardTeacherRole.textContent = userRole;
+                welcomeUsername.textContent = userName.split(' ')[0];
+                
+                // Update avatar
+                if (teacherData.profile_photo_url) {
+                    userAvatar.innerHTML = `<img src="${teacherData.profile_photo_url}" alt="${userName}">`;
+                    dashboardAvatarLarge.innerHTML = `<img src="${teacherData.profile_photo_url}" alt="${userName}">`;
+                } else {
+                    userAvatar.innerHTML = initials || '<i class="fas fa-user"></i>';
+                    dashboardAvatarLarge.innerHTML = initials || '<i class="fas fa-user"></i>';
+                }
+                
+                // Update classes info
+                updateClassesInfo(teacherData);
+                
+                // Apply theme preference
+                if (teacherData.preferences && teacherData.preferences.theme) {
+                    applyTheme(teacherData.preferences.theme);
+                }
+                
+                // Simpan data ke localStorage untuk akses cepat
+                localStorage.setItem('smartMudarrisUser', JSON.stringify({
+                    name: userName,
+                    email: userEmail,
+                    role: userRole,
+                    school: school,
+                    nuptk: teacherData.nuptk,
+                    profilePhoto: teacherData.profile_photo_url
+                }));
+                
+            } catch (error) {
+                console.error('Error loading teacher profile:', error);
+                
+                // Fallback to basic user data
+                const userName = currentUser.user_metadata?.full_name || 'Guru Madrasah';
+                const userEmail = currentUser.email || 'email@madrasah.sch.id';
+                const initials = userName.split(' ').map(n => n[0]).join('').toUpperCase();
+                
+                dashboardUsername.textContent = userName;
+                dashboardRole.textContent = 'Pengajar';
+                dashboardFullname.textContent = userName;
+                dashboardEmail.textContent = userEmail;
+                dashboardSchool.textContent = 'Sekolah Madrasah';
+                dashboardNuptk.textContent = 'NUPTK: -';
+                dashboardTeacherRole.textContent = 'Guru';
+                welcomeUsername.textContent = userName.split(' ')[0];
+                userAvatar.innerHTML = initials || '<i class="fas fa-user"></i>';
+                dashboardAvatarLarge.innerHTML = initials || '<i class="fas fa-user"></i>';
+            }
+        }
+
+        // Update classes information on dashboard
+        function updateClassesInfo(teacherData) {
+            const classesInfo = document.getElementById('dashboard-classes-info');
+            classesInfo.innerHTML = '';
+            
+            if (teacherData.role === 'kelas' && teacherData.homeroom_classes && teacherData.homeroom_classes.length > 0) {
+                const classes = teacherData.homeroom_classes.join(', ');
+                const item = document.createElement('div');
+                item.className = 'meta-item';
+                item.innerHTML = `<i class="fas fa-chalkboard-teacher"></i><span>Kelas: ${classes}</span>`;
+                classesInfo.appendChild(item);
+            } else if (teacherData.role === 'mapel') {
+                if (teacherData.subjects && teacherData.subjects.length > 0) {
+                    const subjects = teacherData.subjects.join(', ');
+                    const item = document.createElement('div');
+                    item.className = 'meta-item';
+                    item.innerHTML = `<i class="fas fa-book"></i><span>Mapel: ${subjects}</span>`;
+                    classesInfo.appendChild(item);
+                }
+                
+                if (teacherData.teaching_classes && teacherData.teaching_classes.length > 0) {
+                    const classes = teacherData.teaching_classes.join(', ');
+                    const item = document.createElement('div');
+                    item.className = 'meta-item';
+                    item.innerHTML = `<i class="fas fa-chalkboard"></i><span>Kelas: ${classes}</span>`;
+                    classesInfo.appendChild(item);
+                }
+            }
+        }
+
+        // Get role display name
+        function getRoleDisplayName(role) {
+            const roleNames = {
+                'umum': 'Guru Umum',
+                'kelas': 'Guru Kelas',
+                'mapel': 'Guru Mata Pelajaran'
+            };
+            return roleNames[role] || 'Guru';
+        }
+
+        // Apply theme
+        function applyTheme(theme) {
+            // This would normally change CSS variables
+            // For now, we just store it for future implementation
+            localStorage.setItem('smartMudarrisTheme', theme);
+        }
+
+        // Show specific form
+        function showForm(formType) {
+            // Hide all forms and alerts
+            loginForm.classList.add('hidden');
+            signupForm.classList.add('hidden');
+            forgotPasswordForm.classList.add('hidden');
+            hideAllAlerts();
+
+            // Show selected form
+            switch (formType) {
+                case 'login':
+                    loginForm.classList.remove('hidden');
+                    authFormTitle.textContent = 'Masuk ke Akun Anda';
+                    authFormSubtitle.textContent = 'Platform digital terpadu untuk guru madrasah';
+                    break;
+                case 'signup':
+                    signupForm.classList.remove('hidden');
+                    authFormTitle.textContent = 'Buat Akun Baru';
+                    authFormSubtitle.textContent = 'Daftar sebagai guru madrasah terverifikasi';
+                    break;
+                case 'forgot':
+                    forgotPasswordForm.classList.remove('hidden');
+                    authFormTitle.textContent = 'Reset Password';
+                    authFormSubtitle.textContent = 'Masukkan email untuk menerima link reset';
+                    break;
+            }
+        }
+
+        // Reset signup form
+        function resetSignupForm() {
+            // Reset form values
+            signupForm.reset();
+            
+            // Reset photo
+            photoFile = null;
+            photoUrl = null;
+            photoPreview.innerHTML = `
+                <div class="photo-placeholder">
+                    <i class="fas fa-user-circle"></i>
+                    <span>Belum ada foto</span>
+                </div>
+            `;
+            
+            // Reset dynamic inputs
+            resetDynamicInputs();
+            
+            // Reset to step 1
+            goToStep(1);
+            
+            // Reset validation
+            hideValidationMessages();
+            
+            // Reset password strength
+            document.getElementById('password-strength').className = 'password-strength';
+        }
+
+        // Reset dynamic inputs
+        function resetDynamicInputs() {
+            // Reset kelas inputs
+            const kelasInputs = document.getElementById('kelas-inputs');
+            kelasInputs.innerHTML = `
+                <div class="dynamic-input-row">
+                    <div class="input-wrapper dynamic-input">
+                        <i class="fas fa-chalkboard-teacher input-icon"></i>
+                        <input type="text" class="form-input small" placeholder="Contoh: Kelas 1A" data-index="0">
+                    </div>
+                    <button type="button" class="btn-add" id="add-kelas">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+            `;
+            
+            // Reset mapel inputs
+            const mapelInputs = document.getElementById('mapel-inputs');
+            mapelInputs.innerHTML = `
+                <div class="dynamic-input-row">
+                    <div class="input-wrapper dynamic-input">
+                        <i class="fas fa-book input-icon"></i>
+                        <input type="text" class="form-input small" placeholder="Contoh: Matematika" data-index="0">
+                    </div>
+                    <button type="button" class="btn-add" id="add-mapel">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+            `;
+            
+            // Reset mapel kelas inputs
+            const mapelKelasInputs = document.getElementById('mapel-kelas-inputs');
+            mapelKelasInputs.innerHTML = `
+                <div class="dynamic-input-row">
+                    <div class="input-wrapper dynamic-input">
+                        <i class="fas fa-chalkboard input-icon"></i>
+                        <input type="text" class="form-input small" placeholder="Contoh: 1A" data-index="0">
+                    </div>
+                    <button type="button" class="btn-add" id="add-mapel-kelas">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+            `;
+            
+            // Re-add event listeners
+            setupDynamicInputs();
+        }
+
+        // Show dashboard
+        function showDashboard() {
+            authContainer.style.display = 'none';
+            dashboardContainer.style.display = 'block';
+            
+            // Reset sidebar state pada mobile
+            if (window.innerWidth <= 1024) {
+                dashboardSidebar.classList.remove('active');
+            }
+        }
+
+        // Show auth page
+        function showAuth() {
+            authContainer.style.display = 'flex';
+            dashboardContainer.style.display = 'none';
+            showForm('login');
+        }
+
+        // Show alert message
+        function showAlert(type, message) {
+            // Hide all alerts first
+            hideAllAlerts();
+
+            // Show selected alert
+            switch (type) {
+                case 'error':
+                    alertErrorMessage.textContent = message;
+                    alertError.classList.remove('hidden');
+                    break;
+                case 'success':
+                    alertSuccessMessage.textContent = message;
+                    alertSuccess.classList.remove('hidden');
+                    break;
+            }
+
+            // Auto-hide setelah 5 detik
+            setTimeout(() => {
+                hideAllAlerts();
+            }, 5000);
+        }
+
+        // Hide all alerts
+        function hideAllAlerts() {
+            alertError.classList.add('hidden');
+            alertSuccess.classList.add('hidden');
+        }
+
+        // Hide all validation messages
+        function hideValidationMessages() {
+            const validationMessages = document.querySelectorAll('.validation-message');
+            validationMessages.forEach(msg => {
+                msg.classList.add('hidden');
+            });
+        }
+
+        // Show validation error
+        function showValidationError(elementId, message) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.textContent = message;
+                element.classList.remove('hidden');
+            }
+        }
+
+        // Helper functions
+        function isValidEmail(email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(email);
+        }
+
+        // Inisialisasi app saat DOM siap
+        document.addEventListener('DOMContentLoaded', initApp);
+
+        // Handle Supabase auth state changes
+        supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_IN' && session) {
+                currentUser = session.user;
+                loadUserProfile();
+                showDashboard();
+            }
+            
+            if (event === 'SIGNED_OUT') {
+                currentUser = null;
+                currentTeacher = null;
+                showAuth();
+            }
+        });
+    </script>
+</body>
+</html>
