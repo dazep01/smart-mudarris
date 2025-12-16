@@ -1900,109 +1900,111 @@
 
     <!-- Supabase Integration -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-    <script>
-        // Konfigurasi Supabase - GANTI DENGAN KONFIGURASI ANDA
-        const SUPABASE_URL = 'https://mchemidupcgoqwmzpzwj.supabase.co'; // Ganti dengan URL Supabase Anda
-        const SUPABASE_ANON_KEY = 'sb_publishable_hjn7xY3KwMfpTtfT8Q6ttQ_j196A29n'; // Ganti dengan anon key Anda
+<script>
+    // Konfigurasi Supabase
+    const SUPABASE_URL = 'https://mchemidupcgoqwmzpzwj.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_hjn7xY3KwMfpTtfT8Q6ttQ_j196A29n';
 
-        // Inisialisasi Supabase
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // Inisialisasi Supabase
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // Status pendaftaran (true untuk aktif)
-        const SIGNUP_ENABLED = true;
+    // State aplikasi
+    const signupState = { role: null };
+    const SIGNUP_ENABLED = true;
+    
+    let currentUser = null;
+    let currentTeacher = null;
+    let currentStep = 1;
+    let authInitialized = false;
+    let photoFile = null;
+    let photoUrl = null;
+    let stream = null;
 
-        // State aplikasi
-        let currentUser = null;
-        let currentTeacher = null;
-        let currentStep = 1;
-        let photoFile = null;
-        let photoUrl = null;
-        let stream = null;
+    // DOM Elements
+    const loadingScreen = document.querySelector('.loading-screen');
+    const authContainer = document.getElementById('auth-container');
+    const dashboardContainer = document.getElementById('dashboard-container');
+    const cameraContainer = document.getElementById('camera-container');
+    const cameraPreview = document.getElementById('camera-preview');
+    const captureBtn = document.getElementById('capture-btn');
+    const cancelCameraBtn = document.getElementById('cancel-camera-btn');
+    
+    // Form containers
+    const loginForm = document.getElementById('login-form');
+    const signupForm = document.getElementById('signup-form');
+    const forgotPasswordForm = document.getElementById('forgot-password-form');
+    
+    // Progress steps
+    const signupProgress = document.getElementById('signup-progress');
+    const signupSteps = document.querySelectorAll('.signup-step');
+    const progressSteps = document.querySelectorAll('.progress-step');
+    
+    // Alert elements
+    const alertError = document.getElementById('alert-error');
+    const alertSuccess = document.getElementById('alert-success');
+    const alertErrorMessage = document.getElementById('alert-error-message');
+    const alertSuccessMessage = document.getElementById('alert-success-message');
+    
+    // Buttons and links
+    const showSignupFormBtn = document.getElementById('show-signup-form');
+    const showLoginFormBtn = document.getElementById('show-login-form-from-signup');
+    const showLoginFormFromForgotBtn = document.getElementById('show-login-form-from-forgot');
+    const forgotPasswordLink = document.getElementById('forgot-password-link');
+    const logoutBtn = document.getElementById('logout-btn');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    const dashboardSidebar = document.getElementById('dashboard-sidebar');
+    
+    // Step navigation buttons
+    const nextStep1Btn = document.getElementById('next-step-1');
+    const prevStep2Btn = document.getElementById('prev-step-2');
+    const nextStep2Btn = document.getElementById('next-step-2');
+    const prevStep3Btn = document.getElementById('prev-step-3');
+    const signupBtn = document.getElementById('signup-btn');
+    
+    // Dynamic input buttons
+    const addKelasBtn = document.getElementById('add-kelas');
+    const addMapelBtn = document.getElementById('add-mapel');
+    const addMapelKelasBtn = document.getElementById('add-mapel-kelas');
+    
+    // Photo upload
+    const photoPreview = document.getElementById('photo-preview');
+    const uploadPhotoBtn = document.getElementById('upload-photo-btn');
+    const selfieBtn = document.getElementById('selfie-btn');
+    const photoFileInput = document.getElementById('photo-file');
+    
+    // Theme toggle
+    const themeOptions = document.querySelectorAll('.theme-option');
+    
+    // User display elements
+    const dashboardUsername = document.getElementById('dashboard-username');
+    const dashboardRole = document.getElementById('dashboard-role');
+    const dashboardFullname = document.getElementById('dashboard-fullname');
+    const dashboardEmail = document.getElementById('dashboard-email');
+    const dashboardSchool = document.getElementById('dashboard-school');
+    const dashboardNuptk = document.getElementById('dashboard-nuptk');
+    const dashboardTeacherRole = document.getElementById('dashboard-teacher-role');
+    const dashboardClassesInfo = document.getElementById('dashboard-classes-info');
+    const welcomeUsername = document.getElementById('welcome-username');
+    const userAvatar = document.getElementById('user-avatar');
+    const dashboardAvatarLarge = document.getElementById('dashboard-avatar-large');
+    const authFormTitle = document.getElementById('auth-form-title');
+    const authFormSubtitle = document.getElementById('auth-form-subtitle');
 
-        // DOM Elements
-        const loadingScreen = document.querySelector('.loading-screen');
-        const authContainer = document.getElementById('auth-container');
-        const dashboardContainer = document.getElementById('dashboard-container');
-        const cameraContainer = document.getElementById('camera-container');
-        const cameraPreview = document.getElementById('camera-preview');
-        const captureBtn = document.getElementById('capture-btn');
-        const cancelCameraBtn = document.getElementById('cancel-camera-btn');
-        
-        // Form containers
-        const loginForm = document.getElementById('login-form');
-        const signupForm = document.getElementById('signup-form');
-        const forgotPasswordForm = document.getElementById('forgot-password-form');
-        
-        // Progress steps
-        const signupProgress = document.getElementById('signup-progress');
-        const signupSteps = document.querySelectorAll('.signup-step');
-        const progressSteps = document.querySelectorAll('.progress-step');
-        
-        // Alert elements
-        const alertError = document.getElementById('alert-error');
-        const alertSuccess = document.getElementById('alert-success');
-        const alertErrorMessage = document.getElementById('alert-error-message');
-        const alertSuccessMessage = document.getElementById('alert-success-message');
-        
-        // Buttons and links
-        const showSignupFormBtn = document.getElementById('show-signup-form');
-        const showLoginFormBtn = document.getElementById('show-login-form-from-signup');
-        const showLoginFormFromForgotBtn = document.getElementById('show-login-form-from-forgot');
-        const forgotPasswordLink = document.getElementById('forgot-password-link');
-        const logoutBtn = document.getElementById('logout-btn');
-        const sidebarToggle = document.getElementById('sidebar-toggle');
-        const dashboardSidebar = document.getElementById('dashboard-sidebar');
-        
-        // Step navigation buttons
-        const nextStep1Btn = document.getElementById('next-step-1');
-        const prevStep2Btn = document.getElementById('prev-step-2');
-        const nextStep2Btn = document.getElementById('next-step-2');
-        const prevStep3Btn = document.getElementById('prev-step-3');
-        const signupBtn = document.getElementById('signup-btn');
-        
-        // Dynamic input buttons
-        const addKelasBtn = document.getElementById('add-kelas');
-        const addMapelBtn = document.getElementById('add-mapel');
-        const addMapelKelasBtn = document.getElementById('add-mapel-kelas');
-        
-        // Photo upload
-        const photoPreview = document.getElementById('photo-preview');
-        const uploadPhotoBtn = document.getElementById('upload-photo-btn');
-        const selfieBtn = document.getElementById('selfie-btn');
-        const photoFileInput = document.getElementById('photo-file');
-        
-        // Theme toggle
-        const themeOptions = document.querySelectorAll('.theme-option');
-        
-        // User display elements
-        const dashboardUsername = document.getElementById('dashboard-username');
-        const dashboardRole = document.getElementById('dashboard-role');
-        const dashboardFullname = document.getElementById('dashboard-fullname');
-        const dashboardEmail = document.getElementById('dashboard-email');
-        const dashboardSchool = document.getElementById('dashboard-school');
-        const dashboardNuptk = document.getElementById('dashboard-nuptk');
-        const dashboardTeacherRole = document.getElementById('dashboard-teacher-role');
-        const dashboardClassesInfo = document.getElementById('dashboard-classes-info');
-        const welcomeUsername = document.getElementById('welcome-username');
-        const userAvatar = document.getElementById('user-avatar');
-        const dashboardAvatarLarge = document.getElementById('dashboard-avatar-large');
-        const authFormTitle = document.getElementById('auth-form-title');
-        const authFormSubtitle = document.getElementById('auth-form-subtitle');
-
-        // Inisialisasi aplikasi
-        async function initApp() {
-            // Hide loading screen setelah 1.5 detik
+    // Inisialisasi Aplikasi
+    async function initApp() {
+        setTimeout(() => {
+            loadingScreen.style.opacity = '0';
             setTimeout(() => {
-                loadingScreen.style.opacity = '0';
-                setTimeout(() => {
-                    loadingScreen.style.display = 'none';
-                }, 500);
-            }, 1500);
+                loadingScreen.style.display = 'none';
+            }, 500);
+        }, 1500);
 
-            // Cek session user dari Supabase
-            const { data: { session } } = await supabase.auth.getSession();
-            
-            if (session) {
+        try {
+            const { data: { session }, error } = await supabase.auth.getSession();
+            if (error) throw error;
+
+            if (session && !authInitialized) {
+                authInitialized = true;
                 currentUser = session.user;
                 await loadUserProfile();
                 showDashboard();
@@ -2011,1191 +2013,1021 @@
                 setupAuthForms();
             }
 
-            // Setup event listeners
             setupEventListeners();
-            
-            // Setup dynamic inputs
             setupDynamicInputs();
-            
-            // Setup conditional fields
             setupConditionalFields();
-            
-            // Setup photo upload
             setupPhotoUpload();
-            
-            // Setup camera
             setupCamera();
+        } catch (err) {
+            console.error('Init error:', err);
+            showAuth();
         }
+    }
 
-        // Setup event listeners
-        function setupEventListeners() {
-            // Sidebar toggle untuk mobile
-            sidebarToggle.addEventListener('click', () => {
-                dashboardSidebar.classList.toggle('active');
-            });
+    // Setup Event Listeners
+    function setupEventListeners() {
+        sidebarToggle.addEventListener('click', () => {
+            dashboardSidebar.classList.toggle('active');
+        });
 
-            // Navigation links
-            showSignupFormBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                if (!SIGNUP_ENABLED) {
-                    showAlert('error', 'Pendaftaran saat ini hanya untuk pengguna internal. Hubungi admin untuk akses.');
-                    return;
-                }
-                showForm('signup');
-                resetSignupForm();
-            });
-
-            showLoginFormBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                showForm('login');
-            });
-
-            showLoginFormFromForgotBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                showForm('login');
-            });
-
-            forgotPasswordLink.addEventListener('click', (e) => {
-                e.preventDefault();
-                showForm('forgot');
-            });
-
-            // Logout
-            logoutBtn.addEventListener('click', handleLogout);
-
-            // Step navigation
-            nextStep1Btn.addEventListener('click', validateStep1);
-            prevStep2Btn.addEventListener('click', () => goToStep(1));
-            nextStep2Btn.addEventListener('click', validateStep2);
-            prevStep3Btn.addEventListener('click', () => goToStep(2));
-            
-            // Theme toggle
-            themeOptions.forEach(option => {
-                option.addEventListener('click', () => {
-                    themeOptions.forEach(opt => opt.classList.remove('active'));
-                    option.classList.add('active');
-                });
-            });
-            
-            // WhatsApp notification toggle
-            const whatsappInput = document.getElementById('signup-whatsapp');
-            const whatsappNotifOption = document.getElementById('whatsapp-notif-option');
-            
-            whatsappInput.addEventListener('input', () => {
-                const whatsappValue = whatsappInput.value.trim();
-                if (whatsappValue) {
-                    whatsappNotifOption.style.display = 'flex';
-                } else {
-                    whatsappNotifOption.style.display = 'none';
-                    const whatsappCheckbox = whatsappNotifOption.querySelector('input');
-                    whatsappCheckbox.checked = false;
-                }
-            });
-            
-            // Real-time validation
-            setupRealTimeValidation();
-        }
-
-        // Setup dynamic inputs
-        function setupDynamicInputs() {
-            // Add kelas input
-            addKelasBtn.addEventListener('click', () => {
-                addDynamicInput('kelas-inputs', 'Kelas', 'fa-chalkboard-teacher', 'Contoh: Kelas 2B');
-            });
-            
-            // Add mapel input
-            addMapelBtn.addEventListener('click', () => {
-                addDynamicInput('mapel-inputs', 'Mata Pelajaran', 'fa-book', 'Contoh: IPA');
-            });
-            
-            // Add mapel kelas input
-            addMapelKelasBtn.addEventListener('click', () => {
-                addDynamicInput('mapel-kelas-inputs', 'Kelas', 'fa-chalkboard', 'Contoh: 2B');
-            });
-        }
-
-        // Setup conditional fields
-        function setupConditionalFields() {
-            const roleInputs = document.querySelectorAll('input[name="teacher-role"]');
-            
-            roleInputs.forEach(input => {
-                input.addEventListener('change', () => {
-                    const role = input.value;
-                    
-                    // Hide all conditional fields
-                    document.getElementById('kelas-fields').classList.remove('show');
-                    document.getElementById('mapel-fields').classList.remove('show');
-                    
-                    // Show relevant fields
-                    if (role === 'kelas') {
-                        document.getElementById('kelas-fields').classList.add('show');
-                    } else if (role === 'mapel') {
-                        document.getElementById('mapel-fields').classList.add('show');
-                    }
-                });
-            });
-        }
-
-        // Setup photo upload
-        function setupPhotoUpload() {
-            // File upload
-            uploadPhotoBtn.addEventListener('click', () => {
-                photoFileInput.click();
-            });
-            
-            photoFileInput.addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    validateAndPreviewPhoto(file);
-                }
-            });
-            
-            // Selfie button
-            selfieBtn.addEventListener('click', openCamera);
-            
-            // Capture photo
-            captureBtn.addEventListener('click', capturePhoto);
-            
-            // Cancel camera
-            cancelCameraBtn.addEventListener('click', closeCamera);
-        }
-
-        // Setup camera
-        function setupCamera() {
-            // Camera setup is done in openCamera function
-        }
-
-        // Setup real-time validation
-        function setupRealTimeValidation() {
-            // Password strength
-            const passwordInput = document.getElementById('signup-password');
-            const passwordStrength = document.getElementById('password-strength');
-            
-            passwordInput.addEventListener('input', () => {
-                const password = passwordInput.value;
-                checkPasswordStrength(password, passwordStrength);
-                
-                // Confirm password validation
-                const confirmPassword = document.getElementById('signup-confirm-password').value;
-                if (confirmPassword) {
-                    validateConfirmPassword();
-                }
-            });
-            
-            // Confirm password
-            const confirmInput = document.getElementById('signup-confirm-password');
-            confirmInput.addEventListener('input', validateConfirmPassword);
-            
-            // NUPTK validation
-            const nuptkInput = document.getElementById('signup-nuptk');
-            nuptkInput.addEventListener('input', () => {
-                validateNuptk(nuptkInput.value);
-            });
-            
-            // WhatsApp validation
-            const whatsappInput = document.getElementById('signup-whatsapp');
-            whatsappInput.addEventListener('input', () => {
-                validateWhatsapp(whatsappInput.value);
-            });
-            
-            // Email validation
-            const emailInput = document.getElementById('signup-email');
-            emailInput.addEventListener('blur', () => {
-                validateEmail(emailInput.value);
-            });
-        }
-
-        // Add dynamic input field
-        function addDynamicInput(containerId, placeholder, iconClass, example) {
-            const container = document.getElementById(containerId);
-            const rows = container.querySelectorAll('.dynamic-input-row');
-            const index = rows.length;
-            
-            const row = document.createElement('div');
-            row.className = 'dynamic-input-row';
-            row.innerHTML = `
-                <div class="input-wrapper dynamic-input">
-                    <i class="fas ${iconClass} input-icon"></i>
-                    <input type="text" class="form-input small" placeholder="${example}" data-index="${index}">
-                </div>
-                <button type="button" class="btn-remove remove-input">
-                    <i class="fas fa-minus"></i>
-                </button>
-            `;
-            
-            container.appendChild(row);
-            
-            // Add remove event listener
-            const removeBtn = row.querySelector('.remove-input');
-            removeBtn.addEventListener('click', () => {
-                if (rows.length > 1) {
-                    row.remove();
-                } else {
-                    showAlert('warning', 'Minimal satu input harus diisi');
-                }
-            });
-        }
-
-        // Validate step 1
-        function validateStep1() {
-            const name = document.getElementById('signup-name').value.trim();
-            const email = document.getElementById('signup-email').value.trim();
-            const password = document.getElementById('signup-password').value;
-            const confirmPassword = document.getElementById('signup-confirm-password').value;
-            
-            let isValid = true;
-            
-            // Reset errors
-            hideValidationMessages();
-            
-            // Validate name
-            if (!name) {
-                showValidationError('signup-name-error', 'Nama lengkap harus diisi');
-                isValid = false;
-            }
-            
-            // Validate email
-            if (!email) {
-                showValidationError('signup-email-error', 'Email institusi harus diisi');
-                isValid = false;
-            } else if (!isValidEmail(email)) {
-                showValidationError('signup-email-error', 'Format email tidak valid');
-                isValid = false;
-            }
-            
-            // Validate password
-            if (!password) {
-                showValidationError('signup-password-error', 'Password harus diisi');
-                isValid = false;
-            } else if (password.length < 8) {
-                showValidationError('signup-password-error', 'Password minimal 8 karakter');
-                isValid = false;
-            }
-            
-            // Validate confirm password
-            if (!confirmPassword) {
-                showValidationError('signup-confirm-error', 'Konfirmasi password harus diisi');
-                isValid = false;
-            } else if (password !== confirmPassword) {
-                showValidationError('signup-confirm-error', 'Password tidak cocok');
-                isValid = false;
-            }
-            
-            if (isValid) {
-                goToStep(2);
-            }
-        }
-
-        // Validate step 2
-        function validateStep2() {
-            const school = document.getElementById('signup-school').value.trim();
-            const role = document.querySelector('input[name="teacher-role"]:checked').value;
-            
-            let isValid = true;
-            
-            // Reset errors
-            hideValidationMessages();
-            
-            // Validate school
-            if (!school) {
-                showValidationError('signup-school-error', 'Nama sekolah harus diisi');
-                isValid = false;
-            }
-            
-            // Validate conditional fields
-            if (role === 'kelas') {
-                const kelasInputs = document.querySelectorAll('#kelas-inputs input');
-                const kelasValues = Array.from(kelasInputs).map(input => input.value.trim()).filter(val => val);
-                
-                if (kelasValues.length === 0) {
-                    showValidationError('kelas-error', 'Minimal satu kelas harus diisi');
-                    isValid = false;
-                }
-            } else if (role === 'mapel') {
-                const mapelInputs = document.querySelectorAll('#mapel-inputs input');
-                const mapelValues = Array.from(mapelInputs).map(input => input.value.trim()).filter(val => val);
-                
-                const mapelKelasInputs = document.querySelectorAll('#mapel-kelas-inputs input');
-                const mapelKelasValues = Array.from(mapelKelasInputs).map(input => input.value.trim()).filter(val => val);
-                
-                if (mapelValues.length === 0) {
-                    showValidationError('mapel-error', 'Minimal satu mata pelajaran harus diisi');
-                    isValid = false;
-                }
-                
-                if (mapelKelasValues.length === 0) {
-                    showValidationError('mapel-kelas-error', 'Minimal satu kelas harus diisi');
-                    isValid = false;
-                }
-            }
-            
-            if (isValid) {
-                goToStep(3);
-            }
-        }
-
-        // Go to specific step
-        function goToStep(step) {
-            // Update current step
-            currentStep = step;
-            
-            // Hide all steps
-            signupSteps.forEach(stepEl => {
-                stepEl.classList.remove('active');
-                stepEl.classList.add('hidden');
-            });
-            
-            // Show current step
-            const currentStepEl = document.querySelector(`.signup-step[data-step="${step}"]`);
-            currentStepEl.classList.remove('hidden');
-            currentStepEl.classList.add('active');
-            
-            // Update progress
-            progressSteps.forEach(stepEl => {
-                const stepNumber = parseInt(stepEl.dataset.step);
-                stepEl.classList.remove('active', 'completed');
-                
-                if (stepNumber < step) {
-                    stepEl.classList.add('completed');
-                } else if (stepNumber === step) {
-                    stepEl.classList.add('active');
-                }
-            });
-            
-            // Scroll to top of form
-            document.querySelector('.auth-body').scrollTop = 0;
-        }
-
-        // Validate NUPTK
-        function validateNuptk(nuptk) {
-            const errorElement = document.getElementById('signup-nuptk-error');
-            
-            if (!nuptk) {
-                errorElement.classList.add('hidden');
-                return true;
-            }
-            
-            // Check if it's 16 digits
-            const nuptkRegex = /^\d{16}$/;
-            if (!nuptkRegex.test(nuptk)) {
-                errorElement.classList.remove('hidden');
-                return false;
-            }
-            
-            errorElement.classList.add('hidden');
-            return true;
-        }
-
-        // Validate WhatsApp number
-        function validateWhatsapp(whatsapp) {
-            const errorElement = document.getElementById('whatsapp-error');
-            
-            if (!whatsapp) {
-                errorElement.classList.add('hidden');
-                return true;
-            }
-            
-            // Check if it starts with +62 or 08
-            const whatsappRegex = /^(?:\+62|0)[0-9]{9,12}$/;
-            if (!whatsappRegex.test(whatsapp)) {
-                errorElement.classList.remove('hidden');
-                return false;
-            }
-            
-            errorElement.classList.add('hidden');
-            return true;
-        }
-
-        // Validate email
-        function validateEmail(email) {
-            const errorElement = document.getElementById('signup-email-error');
-            
-            if (!isValidEmail(email)) {
-                showValidationError('signup-email-error', 'Format email tidak valid');
-                return false;
-            }
-            
-            // Optional: Check for institutional domain
-            const institutionalDomains = ['madrasah.sch.id', 'kemenag.go.id', 'sekolahislam.id'];
-            const domain = email.split('@')[1];
-            
-            if (domain && !institutionalDomains.some(d => domain.endsWith(d))) {
-                showValidationError('signup-email-error', 'Disarankan menggunakan email institusi');
-                return false;
-            }
-            
-            errorElement.classList.add('hidden');
-            return true;
-        }
-
-        // Check password strength
-        function checkPasswordStrength(password, strengthElement) {
-            let strength = 0;
-            
-            if (password.length >= 8) strength++;
-            if (/[A-Z]/.test(password)) strength++;
-            if (/[a-z]/.test(password)) strength++;
-            if (/[0-9]/.test(password)) strength++;
-            if (/[^A-Za-z0-9]/.test(password)) strength++;
-            
-            strengthElement.className = 'password-strength';
-            
-            if (password.length === 0) {
-                return;
-            } else if (strength <= 2) {
-                strengthElement.classList.add('weak');
-            } else if (strength <= 4) {
-                strengthElement.classList.add('medium');
-            } else {
-                strengthElement.classList.add('strong');
-            }
-        }
-
-        // Validate confirm password
-        function validateConfirmPassword() {
-            const password = document.getElementById('signup-password').value;
-            const confirmPassword = document.getElementById('signup-confirm-password').value;
-            const errorElement = document.getElementById('signup-confirm-error');
-            
-            if (!confirmPassword) {
-                errorElement.classList.add('hidden');
-                return false;
-            }
-            
-            if (password !== confirmPassword) {
-                showValidationError('signup-confirm-error', 'Password tidak cocok');
-                return false;
-            }
-            
-            errorElement.classList.add('hidden');
-            return true;
-        }
-
-        // Validate and preview photo
-        function validateAndPreviewPhoto(file) {
-            const errorElement = document.getElementById('photo-error');
-            
-            // Check file type
-            const validTypes = ['image/jpeg', 'image/png'];
-            if (!validTypes.includes(file.type)) {
-                showValidationError('photo-error', 'Format file harus JPG atau PNG');
-                return false;
-            }
-            
-            // Check file size (max 2MB)
-            const maxSize = 2 * 1024 * 1024; // 2MB in bytes
-            if (file.size > maxSize) {
-                showValidationError('photo-error', 'Ukuran file maksimal 2 MB');
-                return false;
-            }
-            
-            // Preview photo
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                photoPreview.innerHTML = `<img src="${e.target.result}" alt="Preview Foto">`;
-                photoFile = file;
-                photoUrl = e.target.result;
-            };
-            reader.readAsDataURL(file);
-            
-            errorElement.classList.add('hidden');
-            return true;
-        }
-
-        // Open camera for selfie
-        async function openCamera() {
-            try {
-                stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { 
-                        facingMode: 'user',
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
-                    } 
-                });
-                
-                cameraPreview.srcObject = stream;
-                cameraContainer.style.display = 'flex';
-                document.body.style.overflow = 'hidden';
-            } catch (error) {
-                console.error('Error accessing camera:', error);
-                showAlert('error', 'Tidak dapat mengakses kamera. Pastikan Anda memberikan izin.');
-            }
-        }
-
-        // Close camera
-        function closeCamera() {
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-                stream = null;
-            }
-            
-            cameraContainer.style.display = 'none';
-            document.body.style.overflow = 'auto';
-        }
-
-        // Capture photo from camera
-        function capturePhoto() {
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
-            
-            canvas.width = cameraPreview.videoWidth;
-            canvas.height = cameraPreview.videoHeight;
-            
-            context.drawImage(cameraPreview, 0, 0, canvas.width, canvas.height);
-            
-            canvas.toBlob((blob) => {
-                const file = new File([blob], 'selfie.jpg', { type: 'image/jpeg' });
-                validateAndPreviewPhoto(file);
-                closeCamera();
-            }, 'image/jpeg', 0.9);
-        }
-
-        // Setup auth forms
-        function setupAuthForms() {
-            // Login form
-            loginForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                await handleLogin();
-            });
-
-            // Signup form
-            signupForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                await handleSignup();
-            });
-
-            // Forgot password form
-            forgotPasswordForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                await handleForgotPassword();
-            });
-
-            // Password visibility toggle
-            setupPasswordToggles();
-        }
-
-        // Setup password visibility toggles
-        function setupPasswordToggles() {
-            const toggles = [
-                { inputId: 'login-password', toggleId: 'toggle-login-password' },
-                { inputId: 'signup-password', toggleId: 'toggle-signup-password' },
-                { inputId: 'signup-confirm-password', toggleId: 'toggle-signup-confirm-password' }
-            ];
-
-            toggles.forEach(({ inputId, toggleId }) => {
-                const input = document.getElementById(inputId);
-                const toggle = document.getElementById(toggleId);
-                
-                if (toggle) {
-                    toggle.addEventListener('click', () => {
-                        const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
-                        input.setAttribute('type', type);
-                        toggle.innerHTML = type === 'password' ? '<i class="fas fa-eye"></i>' : '<i class="fas fa-eye-slash"></i>';
-                    });
-                }
-            });
-        }
-
-        // Handle login
-        async function handleLogin() {
-            const email = document.getElementById('login-email').value.trim();
-            const password = document.getElementById('login-password').value;
-            const loginBtn = document.getElementById('login-btn');
-
-            // Validasi input
-            if (!email || !password) {
-                showAlert('error', 'Email dan password harus diisi.');
-                return;
-            }
-
-            // Update button state
-            loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Memproses...</span>';
-            loginBtn.disabled = true;
-
-            try {
-                // Sign in dengan Supabase
-                const { data, error } = await supabase.auth.signInWithPassword({
-                    email,
-                    password
-                });
-
-                if (error) throw error;
-
-                // Login berhasil
-                currentUser = data.user;
-                await loadUserProfile();
-                showDashboard();
-                
-                // Reset form
-                loginForm.reset();
-                
-            } catch (error) {
-                showAlert('error', error.message || 'Login gagal. Periksa email dan password Anda.');
-            } finally {
-                // Reset button state
-                loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i><span>Masuk ke Dashboard</span>';
-                loginBtn.disabled = false;
-            }
-        }
-
-        // Handle signup
-        async function handleSignup() {
+        showSignupFormBtn.addEventListener('click', (e) => {
+            e.preventDefault();
             if (!SIGNUP_ENABLED) {
                 showAlert('error', 'Pendaftaran saat ini hanya untuk pengguna internal. Hubungi admin untuk akses.');
                 return;
             }
+            showForm('signup');
+            resetSignupForm();
+        });
 
-            // Collect all data
+        showLoginFormBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            showForm('login');
+        });
+
+        showLoginFormFromForgotBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            showForm('login');
+        });
+
+        forgotPasswordLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            showForm('forgot');
+        });
+
+        logoutBtn.addEventListener('click', handleLogout);
+
+        nextStep1Btn.addEventListener('click', () => {
+            if (validateStep1()) goToStep(2);
+        });
+        
+        prevStep2Btn.addEventListener('click', () => goToStep(1));
+        
+        nextStep2Btn.addEventListener('click', () => {
+            if (validateStep2()) goToStep(3);
+        });
+        
+        prevStep3Btn.addEventListener('click', () => goToStep(2));
+        
+        themeOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                themeOptions.forEach(opt => opt.classList.remove('active'));
+                option.classList.add('active');
+            });
+        });
+        
+        const whatsappInput = document.getElementById('signup-whatsapp');
+        const whatsappNotifOption = document.getElementById('whatsapp-notif-option');
+        
+        whatsappInput.addEventListener('input', () => {
+            const whatsappValue = whatsappInput.value.trim();
+            if (whatsappValue) {
+                whatsappNotifOption.style.display = 'flex';
+            } else {
+                whatsappNotifOption.style.display = 'none';
+                const whatsappCheckbox = whatsappNotifOption.querySelector('input');
+                whatsappCheckbox.checked = false;
+            }
+        });
+        
+        setupRealTimeValidation();
+    }
+
+    // Setup Fungsi Bantuan
+    function setupDynamicInputs() {
+        addKelasBtn.addEventListener('click', () => {
+            addDynamicInput('kelas-inputs', 'Kelas', 'fa-chalkboard-teacher', 'Contoh: Kelas 2B');
+        });
+        
+        addMapelBtn.addEventListener('click', () => {
+            addDynamicInput('mapel-inputs', 'Mata Pelajaran', 'fa-book', 'Contoh: IPA');
+        });
+        
+        addMapelKelasBtn.addEventListener('click', () => {
+            addDynamicInput('mapel-kelas-inputs', 'Kelas', 'fa-chalkboard', 'Contoh: 2B');
+        });
+    }
+
+    function setupConditionalFields() {
+        const roleInputs = document.querySelectorAll('input[name="teacher-role"]');
+        
+        roleInputs.forEach(input => {
+            input.addEventListener('change', () => {
+                const role = input.value;
+                signupState.role = role;
+                
+                document.getElementById('kelas-fields').classList.remove('show');
+                document.getElementById('mapel-fields').classList.remove('show');
+                
+                if (role === 'kelas') {
+                    document.getElementById('kelas-fields').classList.add('show');
+                } else if (role === 'mapel') {
+                    document.getElementById('mapel-fields').classList.add('show');
+                }
+            });
+        });
+    }
+
+    function setupPhotoUpload() {
+        uploadPhotoBtn.addEventListener('click', () => photoFileInput.click());
+        
+        photoFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) validateAndPreviewPhoto(file);
+        });
+        
+        selfieBtn.addEventListener('click', openCamera);
+        captureBtn.addEventListener('click', capturePhoto);
+        cancelCameraBtn.addEventListener('click', closeCamera);
+    }
+
+    function setupCamera() {}
+
+    function setupRealTimeValidation() {
+        const passwordInput = document.getElementById('signup-password');
+        const passwordStrength = document.getElementById('password-strength');
+        
+        passwordInput.addEventListener('input', () => {
+            const password = passwordInput.value;
+            checkPasswordStrength(password, passwordStrength);
+            
+            const confirmPassword = document.getElementById('signup-confirm-password').value;
+            if (confirmPassword) validateConfirmPassword();
+        });
+        
+        const confirmInput = document.getElementById('signup-confirm-password');
+        confirmInput.addEventListener('input', validateConfirmPassword);
+        
+        const nuptkInput = document.getElementById('signup-nuptk');
+        nuptkInput.addEventListener('input', () => validateNuptk(nuptkInput.value));
+        
+        const whatsappInput = document.getElementById('signup-whatsapp');
+        whatsappInput.addEventListener('input', () => validateWhatsappUI(whatsappInput.value));
+        
+        const emailInput = document.getElementById('signup-email');
+        emailInput.addEventListener('blur', () => validateEmail(emailInput.value));
+    }
+
+    // Fungsi Validasi
+    function validateSignupStep1Data({ name, email, password, confirmPassword }) {
+        if (!name) return 'Nama wajib diisi';
+        if (!email) return 'Email wajib diisi';
+        if (!isValidEmail(email)) return 'Format email tidak valid';
+        if (!password || password.length < 8) return 'Password minimal 8 karakter';
+        if (password !== confirmPassword) return 'Konfirmasi password tidak cocok';
+        return null;
+    }
+
+    function validateSignupStep2Data({ school, role, homeroomClasses, subjects, teachingClasses }) {
+        if (!school) return 'Nama sekolah wajib diisi';
+        if (!role) return 'Peran guru harus dipilih';
+
+        if (role === 'kelas') {
+            if (!homeroomClasses || homeroomClasses.length === 0) {
+                return 'Minimal satu kelas wali harus diisi';
+            }
+        } else if (role === 'mapel') {
+            if (!subjects || subjects.length === 0) return 'Minimal satu mapel harus diisi';
+            if (!teachingClasses || teachingClasses.length === 0) return 'Minimal satu kelas ajar harus diisi';
+        }
+
+        return null;
+    }
+
+    function validateSignupStep3Data({ whatsapp, nuptk, photoFile }) {
+        if (!isValidWhatsapp(whatsapp)) return 'Format WhatsApp tidak valid';
+        if (nuptk && !/^\d{16}$/.test(nuptk)) return 'NUPTK harus 16 digit';
+        if (photoFile && !['image/jpeg', 'image/png'].includes(photoFile.type)) {
+            return 'Foto harus JPG atau PNG';
+        }
+        return null;
+    }
+
+    function validateStep1() {
+        const name = document.getElementById('signup-name').value.trim();
+        const email = document.getElementById('signup-email').value.trim();
+        const password = document.getElementById('signup-password').value;
+        const confirmPassword = document.getElementById('signup-confirm-password').value;
+        
+        const error = validateSignupStep1Data({ name, email, password, confirmPassword });
+        
+        if (error) {
+            showAlert('error', error);
+            return false;
+        }
+        
+        return true;
+    }
+
+    function validateStep2() {
+        const school = document.getElementById('signup-school').value.trim();
+        const role = signupState.role;
+
+        if (!school) {
+            showAlert('error', 'Nama sekolah wajib diisi');
+            return false;
+        }
+
+        if (!role) {
+            showAlert('error', 'Pilih peran guru terlebih dahulu');
+            return false;
+        }
+
+        const homeroomClasses = role === 'kelas' ? collectInputValues('kelas-inputs') : [];
+        const subjects = role === 'mapel' ? collectInputValues('mapel-inputs') : [];
+        const teachingClasses = role === 'mapel' ? collectInputValues('mapel-kelas-inputs') : [];
+
+        const error = validateSignupStep2Data({
+            school,
+            role,
+            homeroomClasses,
+            subjects,
+            teachingClasses
+        });
+
+        if (error) {
+            showAlert('error', error);
+            return false;
+        }
+
+        return true;
+    }
+
+    function validateStep3() {
+        const whatsapp = document.getElementById('signup-whatsapp').value.trim();
+        const nuptk = document.getElementById('signup-nuptk').value.trim();
+        
+        const error = validateSignupStep3Data({ whatsapp, nuptk, photoFile });
+        
+        if (error) {
+            showAlert('error', error);
+            return false;
+        }
+        
+        return true;
+    }
+
+    // Handle Signup
+    async function handleSignup(e) {
+        e.preventDefault();
+
+        const originalBtnHTML = signupBtn.innerHTML;
+
+        try {
+            signupBtn.disabled = true;
+            signupBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mohon tunggu...';
+
+            // Data Dasar
             const name = document.getElementById('signup-name').value.trim();
             const email = document.getElementById('signup-email').value.trim();
             const password = document.getElementById('signup-password').value;
-            const nuptk = document.getElementById('signup-nuptk').value.trim();
+            const confirmPassword = document.getElementById('signup-confirm-password').value;
+
+            // Data Profesional
             const school = document.getElementById('signup-school').value.trim();
-            const role = document.querySelector('input[name="teacher-role"]:checked').value;
-            const whatsapp = document.getElementById('signup-whatsapp').value.trim();
-            
-            // Get theme preference
-            const theme = document.querySelector('.theme-option.active').dataset.theme;
-            
-            // Get notification preferences
-            const notificationCheckboxes = document.querySelectorAll('input[name="notifications"]:checked');
-            const notifications = Array.from(notificationCheckboxes).map(cb => cb.value);
-            
-            // Get conditional data
-            let homeroomClasses = null;
-            let subjects = null;
-            let teachingClasses = null;
-            
-            if (role === 'kelas') {
-                const kelasInputs = document.querySelectorAll('#kelas-inputs input');
-                homeroomClasses = Array.from(kelasInputs).map(input => input.value.trim()).filter(val => val);
-            } else if (role === 'mapel') {
-                const mapelInputs = document.querySelectorAll('#mapel-inputs input');
-                subjects = Array.from(mapelInputs).map(input => input.value.trim()).filter(val => val);
-                
-                const mapelKelasInputs = document.querySelectorAll('#mapel-kelas-inputs input');
-                teachingClasses = Array.from(mapelKelasInputs).map(input => input.value.trim()).filter(val => val);
-            }
-            
-            // Validate all data
-            if (!validateSignupData()) {
+            const role = signupState.role;
+
+            if (!role) {
+                showAlert('error', 'Silakan pilih peran guru terlebih dahulu.');
+                goToStep(2);
                 return;
             }
 
-            // Update button state
-            signupBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Membuat akun...</span>';
-            signupBtn.disabled = true;
+            const homeroomClasses = role === 'kelas' ? collectInputValues('kelas-inputs') : null;
+            const subjects = role === 'mapel' ? collectInputValues('mapel-inputs') : null;
+            const teachingClasses = role === 'mapel' ? collectInputValues('mapel-kelas-inputs') : null;
 
-            try {
-                // Step 1: Sign up dengan Supabase Auth
-                const { data: authData, error: authError } = await supabase.auth.signUp({
-                    email,
-                    password,
-                    options: {
-                        data: {
-                            full_name: name,
-                            role: 'teacher'
-                        }
-                    }
-                });
+            // Data Tambahan
+            const whatsapp = document.getElementById('signup-whatsapp').value.trim();
+            const nuptk = document.getElementById('signup-nuptk').value.trim();
 
-                if (authError) throw authError;
+            const photoInput = document.getElementById('signup-photo');
+            const finalPhotoFile = photoInput?.files?.[0] || photoFile || null;
 
-                const user = authData.user;
-                
-                // Step 2: Upload profile photo jika ada
-                let profilePhotoUrl = null;
-                if (photoFile) {
-                    const fileName = `${user.id}_profile.jpg`;
-                    const { error: uploadError } = await supabase.storage
-                        .from('profile-photos')
-                        .upload(fileName, photoFile, { upsert: true });
-                    
-                    if (!uploadError) {
-                        const { data: { publicUrl } } = supabase.storage
-                            .from('profile-photos')
-                            .getPublicUrl(fileName);
-                        profilePhotoUrl = publicUrl;
-                    }
+            // Supabase Auth Signup
+            const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
+            if (authError) throw authError;
+
+            if (!authData.user) {
+                showAlert('success', 'Akun berhasil dibuat. Silakan cek email untuk verifikasi.');
+                return;
+            }
+
+            const user = authData.user;
+
+            // Kumpulkan Semua Data
+            const collectedData = {
+                name,
+                email,
+                password,
+                confirmPassword,
+                school,
+                role,
+                homeroomClasses,
+                subjects,
+                teachingClasses,
+                whatsapp,
+                nuptk,
+                photoFile: finalPhotoFile
+            };
+
+            // Validasi Final
+            const step1Error = validateSignupStep1Data(collectedData);
+            if (step1Error) {
+                showAlert('error', step1Error);
+                goToStep(1);
+                return;
+            }
+
+            const step2Error = validateSignupStep2Data(collectedData);
+            if (step2Error) {
+                showAlert('error', step2Error);
+                goToStep(2);
+                return;
+            }
+
+            const step3Error = validateSignupStep3Data(collectedData);
+            if (step3Error) {
+                showAlert('error', step3Error);
+                goToStep(3);
+                return;
+            }
+
+            // Upload Foto
+            let photoUrl = null;
+
+            if (finalPhotoFile) {
+                const extension = finalPhotoFile.type.split('/')[1];
+                const fileName = `${user.id}_profile.${extension}`;
+
+                const { error: uploadError } = await supabase.storage
+                    .from('profile-photos')
+                    .upload(fileName, finalPhotoFile, { upsert: true });
+
+                if (uploadError) throw uploadError;
+
+                const { data: publicUrlData } = supabase.storage
+                    .from('profile-photos')
+                    .getPublicUrl(fileName);
+
+                if (publicUrlData && publicUrlData.publicUrl) {
+                    photoUrl = publicUrlData.publicUrl;
                 }
-                
-                // Step 3: Simpan data ke tabel teachers
-                const { error: insertError } = await supabase.from('teachers').insert({
+            }
+
+            // Insert Profile ke Database
+            const { error: profileError } = await supabase
+                .from('teachers')
+                .insert({
                     id: user.id,
-                    full_name: name,
+                    name: name,
                     email: email,
-                    nuptk: nuptk || null,
                     school: school,
                     role: role,
                     homeroom_classes: homeroomClasses,
                     subjects: subjects,
                     teaching_classes: teachingClasses,
-                    whatsapp: whatsapp || null,
-                    profile_photo_url: profilePhotoUrl,
-                    preferences: {
-                        theme: theme,
-                        notifications: notifications
-                    }
+                    whatsapp: whatsapp,
+                    nuptk: nuptk,
+                    profile_photo_url: photoUrl
                 });
 
-                if (insertError) throw insertError;
+            if (profileError) throw profileError;
 
-                // Step 4: Auto login
-                const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
-                    email,
-                    password
-                });
-
+            // Auto Login
+            if (!authData.session) {
+                const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
                 if (loginError) throw loginError;
-
-                // Success
-                currentUser = loginData.user;
-                await loadUserProfile();
-                showDashboard();
-                
-                // Reset form
-                resetSignupForm();
-                
-                // Show success message
-                showAlert('success', 'Akun berhasil dibuat! Anda sekarang masuk ke dashboard.');
-                
-            } catch (error) {
-                console.error('Signup error:', error);
-                showAlert('error', error.message || 'Pendaftaran gagal. Silakan coba lagi.');
-            } finally {
-                // Reset button state
-                signupBtn.innerHTML = '<i class="fas fa-user-plus"></i><span>Buat Akun</span>';
-                signupBtn.disabled = false;
             }
+
+            showAlert('success', 'Akun berhasil dibuat! Selamat datang ✨');
+
+        } catch (err) {
+            console.error('Signup Error:', err);
+            showAlert('error', err.message || 'Terjadi kesalahan saat pendaftaran.');
+        } finally {
+            signupBtn.disabled = false;
+            signupBtn.innerHTML = originalBtnHTML;
+        }
+    }
+
+    // Fungsi Bantuan Tambahan
+    function addDynamicInput(containerId, placeholder, iconClass, example) {
+        const container = document.getElementById(containerId);
+        const rows = container.querySelectorAll('.dynamic-input-row');
+        const index = rows.length;
+        
+        const row = document.createElement('div');
+        row.className = 'dynamic-input-row';
+        row.innerHTML = `
+            <div class="input-wrapper dynamic-input">
+                <i class="fas ${iconClass} input-icon"></i>
+                <input type="text" class="form-input small" placeholder="${example}" data-index="${index}">
+            </div>
+            <button type="button" class="btn-remove remove-input">
+                <i class="fas fa-minus"></i>
+            </button>
+        `;
+        
+        container.appendChild(row);
+        
+        const removeBtn = row.querySelector('.remove-input');
+        removeBtn.addEventListener('click', () => {
+            if (rows.length > 1) {
+                row.remove();
+            } else {
+                showAlert('warning', 'Minimal satu input harus diisi');
+            }
+        });
+    }
+
+    function collectInputValues(containerId) {
+        return Array.from(document.querySelectorAll(`#${containerId} input`))
+            .map(input => input.value.trim())
+            .filter(value => value !== '');
+    }
+
+    function goToStep(step) {
+        currentStep = step;
+        
+        signupSteps.forEach(stepEl => {
+            stepEl.classList.remove('active');
+            stepEl.classList.add('hidden');
+        });
+        
+        const currentStepEl = document.querySelector(`.signup-step[data-step="${step}"]`);
+        currentStepEl.classList.remove('hidden');
+        currentStepEl.classList.add('active');
+        
+        progressSteps.forEach(stepEl => {
+            const stepNumber = parseInt(stepEl.dataset.step);
+            stepEl.classList.remove('active', 'completed');
+            
+            if (stepNumber < step) stepEl.classList.add('completed');
+            else if (stepNumber === step) stepEl.classList.add('active');
+        });
+        
+        document.querySelector('.auth-body').scrollTop = 0;
+    }
+
+    function validateNuptk(nuptk) {
+        const errorElement = document.getElementById('signup-nuptk-error');
+        
+        if (!nuptk) {
+            errorElement.classList.add('hidden');
+            return true;
+        }
+        
+        const nuptkRegex = /^\d{16}$/;
+        if (!nuptkRegex.test(nuptk)) {
+            errorElement.classList.remove('hidden');
+            return false;
+        }
+        
+        errorElement.classList.add('hidden');
+        return true;
+    }
+
+    function isValidWhatsapp(whatsapp) {
+        if (!whatsapp) return true;
+        return /^(?:\+62|0)[0-9]{9,12}$/.test(whatsapp);
+    }
+
+    function validateWhatsappUI(whatsapp) {
+        const errorElement = document.getElementById('whatsapp-error');
+        
+        if (isValidWhatsapp(whatsapp)) {
+            errorElement.classList.add('hidden');
+            return true;
         }
 
-        // Validate all signup data
-        function validateSignupData() {
-            let isValid = true;
-            
-            // Validate step 1 data
-            if (!validateStep1()) {
-                goToStep(1);
-                isValid = false;
-            }
-            
-            // Validate step 2 data
-            if (!validateStep2()) {
-                goToStep(2);
-                isValid = false;
-            }
-            
-            // Validate photo
-            if (photoFile) {
-                if (!validateAndPreviewPhoto(photoFile)) {
-                    isValid = false;
-                }
-            }
-            
-            // Validate WhatsApp
-            const whatsapp = document.getElementById('signup-whatsapp').value.trim();
-            if (whatsapp && !validateWhatsapp(whatsapp)) {
-                goToStep(3);
-                isValid = false;
-            }
-            
-            // Validate NUPTK
-            const nuptk = document.getElementById('signup-nuptk').value.trim();
-            if (nuptk && !validateNuptk(nuptk)) {
-                goToStep(2);
-                isValid = false;
-            }
-            
-            return isValid;
+        errorElement.classList.remove('hidden');
+        return false;
+    }
+
+    function validateEmail(email) {
+        const errorElement = document.getElementById('signup-email-error');
+        
+        if (!isValidEmail(email)) {
+            showValidationError('signup-email-error', 'Format email tidak valid');
+            return false;
         }
+        
+        const institutionalDomains = ['madrasah.sch.id', 'kemenag.go.id', 'sekolahislam.id'];
+        const domain = email.split('@')[1];
+        
+        if (domain && !institutionalDomains.some(d => domain.endsWith(d))) {
+            showValidationError('signup-email-error', 'Disarankan menggunakan email institusi');
+            return false;
+        }
+        
+        errorElement.classList.add('hidden');
+        return true;
+    }
 
-        // Handle forgot password
-        async function handleForgotPassword() {
-            const email = document.getElementById('forgot-email').value.trim();
-            const resetBtn = document.getElementById('reset-btn');
+    function checkPasswordStrength(password, strengthElement) {
+        let strength = 0;
+        
+        if (password.length >= 8) strength++;
+        if (/[A-Z]/.test(password)) strength++;
+        if (/[a-z]/.test(password)) strength++;
+        if (/[0-9]/.test(password)) strength++;
+        if (/[^A-Za-z0-9]/.test(password)) strength++;
+        
+        strengthElement.className = 'password-strength';
+        
+        if (password.length === 0) return;
+        else if (strength <= 2) strengthElement.classList.add('weak');
+        else if (strength <= 4) strengthElement.classList.add('medium');
+        else strengthElement.classList.add('strong');
+    }
 
-            if (!email) {
-                showAlert('error', 'Email harus diisi.');
-                return;
-            }
+    function validateConfirmPassword() {
+        const password = document.getElementById('signup-password').value;
+        const confirmPassword = document.getElementById('signup-confirm-password').value;
+        const errorElement = document.getElementById('signup-confirm-error');
+        
+        if (!confirmPassword) {
+            errorElement.classList.add('hidden');
+            return false;
+        }
+        
+        if (password !== confirmPassword) {
+            showValidationError('signup-confirm-error', 'Password tidak cocok');
+            return false;
+        }
+        
+        errorElement.classList.add('hidden');
+        return true;
+    }
 
-            // Update button state
-            resetBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Mengirim...</span>';
-            resetBtn.disabled = true;
+    function validateAndPreviewPhoto(file) {
+        const errorElement = document.getElementById('photo-error');
+        
+        const validTypes = ['image/jpeg', 'image/png'];
+        if (!validTypes.includes(file.type)) {
+            showValidationError('photo-error', 'Format file harus JPG atau PNG');
+            return false;
+        }
+        
+        const maxSize = 2 * 1024 * 1024;
+        if (file.size > maxSize) {
+            showValidationError('photo-error', 'Ukuran file maksimal 2 MB');
+            return false;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            photoPreview.innerHTML = `<img src="${e.target.result}" alt="Preview Foto">`;
+            photoFile = file;
+            photoUrl = e.target.result;
+        };
+        reader.readAsDataURL(file);
+        
+        errorElement.classList.add('hidden');
+        return true;
+    }
 
-            try {
-                // Reset password dengan Supabase
-                const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                    redirectTo: `${window.location.origin}/reset-password.html`,
+    async function openCamera() {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { 
+                    facingMode: 'user',
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                } 
+            });
+            
+            cameraPreview.srcObject = stream;
+            cameraContainer.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        } catch (error) {
+            console.error('Error accessing camera:', error);
+            showAlert('error', 'Tidak dapat mengakses kamera. Pastikan Anda memberikan izin.');
+        }
+    }
+
+    function closeCamera() {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            stream = null;
+        }
+        
+        cameraContainer.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+
+    function capturePhoto() {
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        
+        canvas.width = cameraPreview.videoWidth;
+        canvas.height = cameraPreview.videoHeight;
+        
+        context.drawImage(cameraPreview, 0, 0, canvas.width, canvas.height);
+        
+        canvas.toBlob((blob) => {
+            const file = new File([blob], 'selfie.jpg', { type: 'image/jpeg' });
+            validateAndPreviewPhoto(file);
+            closeCamera();
+        }, 'image/jpeg', 0.9);
+    }
+
+    // Fungsi Auth Lainnya
+    function setupAuthForms() {
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await handleLogin();
+        });
+
+        signupForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await handleSignup();
+        });
+
+        forgotPasswordForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await handleForgotPassword();
+        });
+
+        setupPasswordToggles();
+    }
+
+    function setupPasswordToggles() {
+        const toggles = [
+            { inputId: 'login-password', toggleId: 'toggle-login-password' },
+            { inputId: 'signup-password', toggleId: 'toggle-signup-password' },
+            { inputId: 'signup-confirm-password', toggleId: 'toggle-signup-confirm-password' }
+        ];
+
+        toggles.forEach(({ inputId, toggleId }) => {
+            const input = document.getElementById(inputId);
+            const toggle = document.getElementById(toggleId);
+            
+            if (toggle) {
+                toggle.addEventListener('click', () => {
+                    const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+                    input.setAttribute('type', type);
+                    toggle.innerHTML = type === 'password' ? '<i class="fas fa-eye"></i>' : '<i class="fas fa-eye-slash"></i>';
                 });
-
-                if (error) throw error;
-
-                // Tampilkan pesan sukses
-                showAlert('success', `Tautan reset password telah dikirim ke ${email}. Silakan periksa email Anda.`);
-                
-                // Reset form
-                forgotPasswordForm.reset();
-
-            } catch (error) {
-                showAlert('error', error.message || 'Gagal mengirim email reset. Silakan coba lagi.');
-            } finally {
-                // Reset button state
-                resetBtn.innerHTML = '<i class="fas fa-paper-plane"></i><span>Kirim Link Reset</span>';
-                resetBtn.disabled = false;
             }
+        });
+    }
+
+    async function handleLogin() {
+        const email = document.getElementById('login-email').value.trim();
+        const password = document.getElementById('login-password').value;
+        const loginBtn = document.getElementById('login-btn');
+
+        if (!email || !password) {
+            showAlert('error', 'Email dan password harus diisi.');
+            return;
         }
 
-        // Handle logout
-        async function handleLogout() {
-            try {
-                // Sign out dari Supabase
-                const { error } = await supabase.auth.signOut();
-                
-                if (error) throw error;
+        loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Memproses...</span>';
+        loginBtn.disabled = true;
 
-                // Reset state
-                currentUser = null;
-                currentTeacher = null;
-                
-                // Kembali ke halaman auth
-                showAuth();
-                showForm('login');
-                
-                // Reset forms
-                loginForm.reset();
-                resetSignupForm();
-                forgotPasswordForm.reset();
+        try {
+            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) throw error;
 
-            } catch (error) {
-                console.error('Logout error:', error);
-            }
+            currentUser = data.user;
+            await loadUserProfile();
+            showDashboard();
+            loginForm.reset();
+            
+        } catch (error) {
+            showAlert('error', error.message || 'Login gagal. Periksa email dan password Anda.');
+        } finally {
+            loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i><span>Masuk ke Dashboard</span>';
+            loginBtn.disabled = false;
+        }
+    }
+
+    async function handleForgotPassword() {
+        const email = document.getElementById('forgot-email').value.trim();
+        const resetBtn = document.getElementById('reset-btn');
+
+        if (!email) {
+            showAlert('error', 'Email harus diisi.');
+            return;
         }
 
-        // Load user profile
-        async function loadUserProfile() {
-            if (!currentUser) return;
+        resetBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Mengirim...</span>';
+        resetBtn.disabled = true;
 
-            try {
-                // Get teacher data from database
-                const { data: teacherData, error } = await supabase
-                    .from('teachers')
-                    .select('*')
-                    .eq('id', currentUser.id)
-                    .single();
+        try {
+            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: `${window.location.origin}/reset-password.html`,
+            });
 
-                if (error) throw error;
+            if (error) throw error;
 
-                currentTeacher = teacherData;
-                
-                // Update UI dengan data teacher
-                const userName = teacherData.full_name || 'Guru Madrasah';
-                const userEmail = teacherData.email || 'email@madrasah.sch.id';
-                const userRole = getRoleDisplayName(teacherData.role);
-                const school = teacherData.school || 'Sekolah Madrasah';
-                const nuptk = teacherData.nuptk ? `NUPTK: ${teacherData.nuptk}` : 'NUPTK: -';
-                
-                // Get avatar initials
-                const initials = userName.split(' ').map(n => n[0]).join('').toUpperCase();
-                
-                // Update dashboard
-                dashboardUsername.textContent = userName;
-                dashboardRole.textContent = userRole;
-                dashboardFullname.textContent = userName;
-                dashboardEmail.textContent = userEmail;
-                dashboardSchool.textContent = school;
-                dashboardNuptk.textContent = nuptk;
-                dashboardTeacherRole.textContent = userRole;
-                welcomeUsername.textContent = userName.split(' ')[0];
-                
-                // Update avatar
-                if (teacherData.profile_photo_url) {
-                    userAvatar.innerHTML = `<img src="${teacherData.profile_photo_url}" alt="${userName}">`;
-                    dashboardAvatarLarge.innerHTML = `<img src="${teacherData.profile_photo_url}" alt="${userName}">`;
-                } else {
-                    userAvatar.innerHTML = initials || '<i class="fas fa-user"></i>';
-                    dashboardAvatarLarge.innerHTML = initials || '<i class="fas fa-user"></i>';
-                }
-                
-                // Update classes info
-                updateClassesInfo(teacherData);
-                
-                // Apply theme preference
-                if (teacherData.preferences && teacherData.preferences.theme) {
-                    applyTheme(teacherData.preferences.theme);
-                }
-                
-                // Simpan data ke localStorage untuk akses cepat
-                localStorage.setItem('smartMudarrisUser', JSON.stringify({
-                    name: userName,
-                    email: userEmail,
-                    role: userRole,
-                    school: school,
-                    nuptk: teacherData.nuptk,
-                    profilePhoto: teacherData.profile_photo_url
-                }));
-                
-            } catch (error) {
-                console.error('Error loading teacher profile:', error);
-                
-                // Fallback to basic user data
-                const userName = currentUser.user_metadata?.full_name || 'Guru Madrasah';
-                const userEmail = currentUser.email || 'email@madrasah.sch.id';
-                const initials = userName.split(' ').map(n => n[0]).join('').toUpperCase();
-                
-                dashboardUsername.textContent = userName;
-                dashboardRole.textContent = 'Pengajar';
-                dashboardFullname.textContent = userName;
-                dashboardEmail.textContent = userEmail;
-                dashboardSchool.textContent = 'Sekolah Madrasah';
-                dashboardNuptk.textContent = 'NUPTK: -';
-                dashboardTeacherRole.textContent = 'Guru';
-                welcomeUsername.textContent = userName.split(' ')[0];
+            showAlert('success', `Tautan reset password telah dikirim ke ${email}. Silakan periksa email Anda.`);
+            forgotPasswordForm.reset();
+
+        } catch (error) {
+            showAlert('error', error.message || 'Gagal mengirim email reset. Silakan coba lagi.');
+        } finally {
+            resetBtn.innerHTML = '<i class="fas fa-paper-plane"></i><span>Kirim Link Reset</span>';
+            resetBtn.disabled = false;
+        }
+    }
+
+    async function handleLogout() {
+        try {
+            const { error } = await supabase.auth.signOut();
+            if (error) throw error;
+
+            currentUser = null;
+            currentTeacher = null;
+            
+            showAuth();
+            showForm('login');
+            
+            loginForm.reset();
+            resetSignupForm();
+            forgotPasswordForm.reset();
+
+        } catch (error) {
+            console.error('Logout error:', error);
+        }
+    }
+
+    // Fungsi Profile & Dashboard
+    async function loadUserProfile() {
+        if (!currentUser) return;
+
+        try {
+            const { data: teacherData, error } = await supabase
+                .from('teachers')
+                .select('*')
+                .eq('id', currentUser.id)
+                .single();
+
+            if (error) throw error;
+
+            currentTeacher = teacherData;
+            
+            const userName = teacherData.full_name || 'Guru Madrasah';
+            const userEmail = teacherData.email || 'email@madrasah.sch.id';
+            const userRole = getRoleDisplayName(teacherData.role);
+            const school = teacherData.school || 'Sekolah Madrasah';
+            const nuptk = teacherData.nuptk ? `NUPTK: ${teacherData.nuptk}` : 'NUPTK: -';
+            
+            const initials = userName.split(' ').map(n => n[0]).join('').toUpperCase();
+            
+            dashboardUsername.textContent = userName;
+            dashboardRole.textContent = userRole;
+            dashboardFullname.textContent = userName;
+            dashboardEmail.textContent = userEmail;
+            dashboardSchool.textContent = school;
+            dashboardNuptk.textContent = nuptk;
+            dashboardTeacherRole.textContent = userRole;
+            welcomeUsername.textContent = userName.split(' ')[0];
+            
+            if (teacherData.profile_photo_url) {
+                userAvatar.innerHTML = `<img src="${teacherData.profile_photo_url}" alt="${userName}">`;
+                dashboardAvatarLarge.innerHTML = `<img src="${teacherData.profile_photo_url}" alt="${userName}">`;
+            } else {
                 userAvatar.innerHTML = initials || '<i class="fas fa-user"></i>';
                 dashboardAvatarLarge.innerHTML = initials || '<i class="fas fa-user"></i>';
             }
-        }
-
-        // Update classes information on dashboard
-        function updateClassesInfo(teacherData) {
-            const classesInfo = document.getElementById('dashboard-classes-info');
-            classesInfo.innerHTML = '';
             
-            if (teacherData.role === 'kelas' && teacherData.homeroom_classes && teacherData.homeroom_classes.length > 0) {
-                const classes = teacherData.homeroom_classes.join(', ');
+            updateClassesInfo(teacherData);
+            
+            if (teacherData.preferences && teacherData.preferences.theme) {
+                applyTheme(teacherData.preferences.theme);
+            }
+            
+            localStorage.setItem('smartMudarrisUser', JSON.stringify({
+                name: userName,
+                email: userEmail,
+                role: userRole,
+                school: school,
+                nuptk: teacherData.nuptk,
+                profilePhoto: teacherData.profile_photo_url
+            }));
+            
+        } catch (error) {
+            console.error('Error loading teacher profile:', error);
+            
+            const userName = currentUser.user_metadata?.full_name || 'Guru Madrasah';
+            const userEmail = currentUser.email || 'email@madrasah.sch.id';
+            const initials = userName.split(' ').map(n => n[0]).join('').toUpperCase();
+            
+            dashboardUsername.textContent = userName;
+            dashboardRole.textContent = 'Pengajar';
+            dashboardFullname.textContent = userName;
+            dashboardEmail.textContent = userEmail;
+            dashboardSchool.textContent = 'Sekolah Madrasah';
+            dashboardNuptk.textContent = 'NUPTK: -';
+            dashboardTeacherRole.textContent = 'Guru';
+            welcomeUsername.textContent = userName.split(' ')[0];
+            userAvatar.innerHTML = initials || '<i class="fas fa-user"></i>';
+            dashboardAvatarLarge.innerHTML = initials || '<i class="fas fa-user"></i>';
+        }
+    }
+
+    function updateClassesInfo(teacherData) {
+        const classesInfo = document.getElementById('dashboard-classes-info');
+        classesInfo.innerHTML = '';
+        
+        if (teacherData.role === 'kelas' && teacherData.homeroom_classes && teacherData.homeroom_classes.length > 0) {
+            const classes = teacherData.homeroom_classes.join(', ');
+            const item = document.createElement('div');
+            item.className = 'meta-item';
+            item.innerHTML = `<i class="fas fa-chalkboard-teacher"></i><span>Kelas: ${classes}</span>`;
+            classesInfo.appendChild(item);
+        } else if (teacherData.role === 'mapel') {
+            if (teacherData.subjects && teacherData.subjects.length > 0) {
+                const subjects = teacherData.subjects.join(', ');
                 const item = document.createElement('div');
                 item.className = 'meta-item';
-                item.innerHTML = `<i class="fas fa-chalkboard-teacher"></i><span>Kelas: ${classes}</span>`;
+                item.innerHTML = `<i class="fas fa-book"></i><span>Mapel: ${subjects}</span>`;
                 classesInfo.appendChild(item);
-            } else if (teacherData.role === 'mapel') {
-                if (teacherData.subjects && teacherData.subjects.length > 0) {
-                    const subjects = teacherData.subjects.join(', ');
-                    const item = document.createElement('div');
-                    item.className = 'meta-item';
-                    item.innerHTML = `<i class="fas fa-book"></i><span>Mapel: ${subjects}</span>`;
-                    classesInfo.appendChild(item);
-                }
-                
-                if (teacherData.teaching_classes && teacherData.teaching_classes.length > 0) {
-                    const classes = teacherData.teaching_classes.join(', ');
-                    const item = document.createElement('div');
-                    item.className = 'meta-item';
-                    item.innerHTML = `<i class="fas fa-chalkboard"></i><span>Kelas: ${classes}</span>`;
-                    classesInfo.appendChild(item);
-                }
             }
-        }
-
-        // Get role display name
-        function getRoleDisplayName(role) {
-            const roleNames = {
-                'umum': 'Guru Umum',
-                'kelas': 'Guru Kelas',
-                'mapel': 'Guru Mata Pelajaran'
-            };
-            return roleNames[role] || 'Guru';
-        }
-
-        // Apply theme
-        function applyTheme(theme) {
-            // This would normally change CSS variables
-            // For now, we just store it for future implementation
-            localStorage.setItem('smartMudarrisTheme', theme);
-        }
-
-        // Show specific form
-        function showForm(formType) {
-            // Hide all forms and alerts
-            loginForm.classList.add('hidden');
-            signupForm.classList.add('hidden');
-            forgotPasswordForm.classList.add('hidden');
-            hideAllAlerts();
-
-            // Show selected form
-            switch (formType) {
-                case 'login':
-                    loginForm.classList.remove('hidden');
-                    authFormTitle.textContent = 'Masuk ke Akun Anda';
-                    authFormSubtitle.textContent = 'Platform digital terpadu untuk guru madrasah';
-                    break;
-                case 'signup':
-                    signupForm.classList.remove('hidden');
-                    authFormTitle.textContent = 'Buat Akun Baru';
-                    authFormSubtitle.textContent = 'Daftar sebagai guru madrasah terverifikasi';
-                    break;
-                case 'forgot':
-                    forgotPasswordForm.classList.remove('hidden');
-                    authFormTitle.textContent = 'Reset Password';
-                    authFormSubtitle.textContent = 'Masukkan email untuk menerima link reset';
-                    break;
-            }
-        }
-
-        // Reset signup form
-        function resetSignupForm() {
-            // Reset form values
-            signupForm.reset();
             
-            // Reset photo
-            photoFile = null;
-            photoUrl = null;
-            photoPreview.innerHTML = `
-                <div class="photo-placeholder">
-                    <i class="fas fa-user-circle"></i>
-                    <span>Belum ada foto</span>
+            if (teacherData.teaching_classes && teacherData.teaching_classes.length > 0) {
+                const classes = teacherData.teaching_classes.join(', ');
+                const item = document.createElement('div');
+                item.className = 'meta-item';
+                item.innerHTML = `<i class="fas fa-chalkboard"></i><span>Kelas: ${classes}</span>`;
+                classesInfo.appendChild(item);
+            }
+        }
+    }
+
+    function getRoleDisplayName(role) {
+        const roleNames = {
+            'umum': 'Guru Umum',
+            'kelas': 'Guru Kelas',
+            'mapel': 'Guru Mata Pelajaran'
+        };
+        return roleNames[role] || 'Guru';
+    }
+
+    function applyTheme(theme) {
+        localStorage.setItem('smartMudarrisTheme', theme);
+    }
+
+    // Fungsi UI & Helper
+    function showForm(formType) {
+        loginForm.classList.add('hidden');
+        signupForm.classList.add('hidden');
+        forgotPasswordForm.classList.add('hidden');
+        hideAllAlerts();
+
+        switch (formType) {
+            case 'login':
+                loginForm.classList.remove('hidden');
+                authFormTitle.textContent = 'Masuk ke Akun Anda';
+                authFormSubtitle.textContent = 'Platform digital terpadu untuk guru madrasah';
+                break;
+            case 'signup':
+                signupForm.classList.remove('hidden');
+                authFormTitle.textContent = 'Buat Akun Baru';
+                authFormSubtitle.textContent = 'Daftar sebagai guru madrasah terverifikasi';
+                break;
+            case 'forgot':
+                forgotPasswordForm.classList.remove('hidden');
+                authFormTitle.textContent = 'Reset Password';
+                authFormSubtitle.textContent = 'Masukkan email untuk menerima link reset';
+                break;
+        }
+    }
+
+    function resetSignupForm() {
+        signupForm.reset();
+        signupState.role = null;
+        photoFile = null;
+        photoUrl = null;
+        photoPreview.innerHTML = `
+            <div class="photo-placeholder">
+                <i class="fas fa-user-circle"></i>
+                <span>Belum ada foto</span>
+            </div>
+        `;
+        resetDynamicInputs();
+        goToStep(1);
+        hideValidationMessages();
+        document.getElementById('password-strength').className = 'password-strength';
+    }
+
+    function resetDynamicInputs() {
+        const kelasInputs = document.getElementById('kelas-inputs');
+        kelasInputs.innerHTML = `
+            <div class="dynamic-input-row">
+                <div class="input-wrapper dynamic-input">
+                    <i class="fas fa-chalkboard-teacher input-icon"></i>
+                    <input type="text" class="form-input small" placeholder="Contoh: Kelas 1A" data-index="0">
                 </div>
-            `;
-            
-            // Reset dynamic inputs
-            resetDynamicInputs();
-            
-            // Reset to step 1
-            goToStep(1);
-            
-            // Reset validation
-            hideValidationMessages();
-            
-            // Reset password strength
-            document.getElementById('password-strength').className = 'password-strength';
-        }
-
-        // Reset dynamic inputs
-        function resetDynamicInputs() {
-            // Reset kelas inputs
-            const kelasInputs = document.getElementById('kelas-inputs');
-            kelasInputs.innerHTML = `
-                <div class="dynamic-input-row">
-                    <div class="input-wrapper dynamic-input">
-                        <i class="fas fa-chalkboard-teacher input-icon"></i>
-                        <input type="text" class="form-input small" placeholder="Contoh: Kelas 1A" data-index="0">
-                    </div>
-                    <button type="button" class="btn-add" id="add-kelas">
-                        <i class="fas fa-plus"></i>
-                    </button>
+                <button type="button" class="btn-add" id="add-kelas">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
+        `;
+        
+        const mapelInputs = document.getElementById('mapel-inputs');
+        mapelInputs.innerHTML = `
+            <div class="dynamic-input-row">
+                <div class="input-wrapper dynamic-input">
+                    <i class="fas fa-book input-icon"></i>
+                    <input type="text" class="form-input small" placeholder="Contoh: Matematika" data-index="0">
                 </div>
-            `;
-            
-            // Reset mapel inputs
-            const mapelInputs = document.getElementById('mapel-inputs');
-            mapelInputs.innerHTML = `
-                <div class="dynamic-input-row">
-                    <div class="input-wrapper dynamic-input">
-                        <i class="fas fa-book input-icon"></i>
-                        <input type="text" class="form-input small" placeholder="Contoh: Matematika" data-index="0">
-                    </div>
-                    <button type="button" class="btn-add" id="add-mapel">
-                        <i class="fas fa-plus"></i>
-                    </button>
+                <button type="button" class="btn-add" id="add-mapel">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
+        `;
+        
+        const mapelKelasInputs = document.getElementById('mapel-kelas-inputs');
+        mapelKelasInputs.innerHTML = `
+            <div class="dynamic-input-row">
+                <div class="input-wrapper dynamic-input">
+                    <i class="fas fa-chalkboard input-icon"></i>
+                    <input type="text" class="form-input small" placeholder="Contoh: 1A" data-index="0">
                 </div>
-            `;
-            
-            // Reset mapel kelas inputs
-            const mapelKelasInputs = document.getElementById('mapel-kelas-inputs');
-            mapelKelasInputs.innerHTML = `
-                <div class="dynamic-input-row">
-                    <div class="input-wrapper dynamic-input">
-                        <i class="fas fa-chalkboard input-icon"></i>
-                        <input type="text" class="form-input small" placeholder="Contoh: 1A" data-index="0">
-                    </div>
-                    <button type="button" class="btn-add" id="add-mapel-kelas">
-                        <i class="fas fa-plus"></i>
-                    </button>
-                </div>
-            `;
-            
-            // Re-add event listeners
-            setupDynamicInputs();
+                <button type="button" class="btn-add" id="add-mapel-kelas">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
+        `;
+        
+        setupDynamicInputs();
+    }
+
+    function showDashboard() {
+        authContainer.style.display = 'none';
+        dashboardContainer.style.display = 'block';
+        
+        if (window.innerWidth <= 1024) dashboardSidebar.classList.remove('active');
+    }
+
+    function showAuth() {
+        authContainer.style.display = 'flex';
+        dashboardContainer.style.display = 'none';
+        showForm('login');
+    }
+
+    function showAlert(type, message) {
+        hideAllAlerts();
+
+        switch (type) {
+            case 'error':
+                alertErrorMessage.textContent = message;
+                alertError.classList.remove('hidden');
+                break;
+            case 'success':
+                alertSuccessMessage.textContent = message;
+                alertSuccess.classList.remove('hidden');
+                break;
         }
 
-        // Show dashboard
-        function showDashboard() {
-            authContainer.classList.add('hidden');
-            dashboardContainer.classList.remove('hidden');
-            dashboardContainer.style.display = 'block';
+        setTimeout(() => hideAllAlerts(), 5000);
+    }
 
-            
-            // Reset sidebar state pada mobile
-            if (window.innerWidth <= 1024) {
-                dashboardSidebar.classList.remove('active');
-            }
+    function hideAllAlerts() {
+        alertError.classList.add('hidden');
+        alertSuccess.classList.add('hidden');
+    }
+
+    function hideValidationMessages() {
+        const validationMessages = document.querySelectorAll('.validation-message');
+        validationMessages.forEach(msg => msg.classList.add('hidden'));
+    }
+
+    function showValidationError(elementId, message) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.textContent = message;
+            element.classList.remove('hidden');
+        }
+    }
+
+    function isValidEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    }
+    
+    // Inisialisasi & Auth State
+    document.addEventListener('DOMContentLoaded', () => initApp());
+
+    supabase.auth.onAuthStateChange(async (event, session) => {
+        if (event === 'SIGNED_IN' && session && !authInitialized) {
+            authInitialized = true;
+            currentUser = session.user;
+            await loadUserProfile();
+            showDashboard();
         }
 
-        // Show auth page
-        function showAuth() {
-            authContainer.style.display = 'flex';
-            dashboardContainer.style.display = 'none';
-            showForm('login');
+        if (event === 'SIGNED_OUT') {
+            authInitialized = false;
+            currentUser = null;
+            currentTeacher = null;
+            showAuth();
         }
-
-        // Show alert message
-        function showAlert(type, message) {
-            // Hide all alerts first
-            hideAllAlerts();
-
-            // Show selected alert
-            switch (type) {
-                case 'error':
-                    alertErrorMessage.textContent = message;
-                    alertError.classList.remove('hidden');
-                    break;
-                case 'success':
-                    alertSuccessMessage.textContent = message;
-                    alertSuccess.classList.remove('hidden');
-                    break;
-            }
-
-            // Auto-hide setelah 5 detik
-            setTimeout(() => {
-                hideAllAlerts();
-            }, 5000);
-        }
-
-        // Hide all alerts
-        function hideAllAlerts() {
-            alertError.classList.add('hidden');
-            alertSuccess.classList.add('hidden');
-        }
-
-        // Hide all validation messages
-        function hideValidationMessages() {
-            const validationMessages = document.querySelectorAll('.validation-message');
-            validationMessages.forEach(msg => {
-                msg.classList.add('hidden');
-            });
-        }
-
-        // Show validation error
-        function showValidationError(elementId, message) {
-            const element = document.getElementById(elementId);
-            if (element) {
-                element.textContent = message;
-                element.classList.remove('hidden');
-            }
-        }
-
-        // Helper functions
-        function isValidEmail(email) {
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            return emailRegex.test(email);
-        }
-
-        // Inisialisasi app saat DOM siap
-        document.addEventListener('DOMContentLoaded', initApp);
-
-        // Handle Supabase auth state changes
-        supabase.auth.onAuthStateChange((event, session) => {
-            if (event === 'SIGNED_IN' && session) {
-                currentUser = session.user;
-                loadUserProfile();
-                showDashboard();
-            }
-            
-            if (event === 'SIGNED_OUT') {
-                currentUser = null;
-                currentTeacher = null;
-                showAuth();
-            }
-        });
-    </script>
+    });
+</script>
 </body>
 </html>
