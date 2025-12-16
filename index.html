@@ -2038,21 +2038,25 @@
             }
             showForm('signup');
             resetSignupForm();
+            setupPasswordToggles();
         });
 
         showLoginFormBtn.addEventListener('click', (e) => {
             e.preventDefault();
             showForm('login');
+            setupPasswordToggles();
         });
 
         showLoginFormFromForgotBtn.addEventListener('click', (e) => {
             e.preventDefault();
             showForm('login');
+            setupPasswordToggles();
         });
 
         forgotPasswordLink.addEventListener('click', (e) => {
             e.preventDefault();
             showForm('forgot');
+            setupPasswordToggles();
         });
 
         logoutBtn.addEventListener('click', handleLogout);
@@ -2513,7 +2517,7 @@
             return false;
         }
         
-        const institutionalDomains = ['madrasah.sch.id', 'kemenag.go.id', 'sekolahislam.id'];
+        const institutionalDomains = ['gmail.com', 'madrasah.sch.id', 'kemenag.go.id', 'sekolahislam.id'];
         const domain = email.split('@')[1];
         
         if (domain && !institutionalDomains.some(d => domain.endsWith(d))) {
