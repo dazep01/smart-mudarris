@@ -1898,572 +1898,1611 @@
         </div>
     </div>
 
-    <!-- Supabase Integration -->
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script>
+    // ============================================================================
+    // KONFIGURASI & INISIALISASI
+    // ============================================================================
+    
     // Konfigurasi Supabase
     const SUPABASE_URL = 'https://mchemidupcgoqwmzpzwj.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_hjn7xY3KwMfpTtfT8Q6ttQ_j196A29n';
-
+    
     // Inisialisasi Supabase
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-    // State aplikasi
-    const signupState = { role: null };
+    
+    // Flags & Constants
     const SIGNUP_ENABLED = true;
     
-    let currentUser = null;
-    let currentTeacher = null;
+    // ============================================================================
+    // STATE MANAGEMENT TERPUSAT
+    // ============================================================================
+    
+    class SignupStateManager {
+        constructor() {
+            // Single Source of Truth - State Lengkap
+            this.state = {
+                // Step 1: Data Dasar
+                name: '',
+                email: '',
+                password: '',
+                confirmPassword: '',
+                passwordStrength: 'empty',
+                
+                // Step 2: Data Profesional
+                school: '',
+                nuptk: '',
+                role: null, // 'umum', 'kelas', 'mapel'
+                homeroomClasses: [''],
+                subjects: [''],
+                teachingClasses: [''],
+                
+                // Step 3: Pengaturan Tambahan
+                whatsapp: '',
+                photoFile: null,
+                photoUrl: '',
+                theme: 'dark',
+                notifications: { email: true, whatsapp: false },
+                
+                // Metadata & Status
+                currentStep: 1,
+                validationErrors: {},
+                isSubmitting: false,
+                isValid: {
+                    step1: false,
+                    step2: false,
+                    step3: false
+                }
+            };
+            
+            this.listeners = [];
+            this.isBatchUpdating = false;
+        }
+        
+        // Update State dengan Validasi Otomatis
+        update(updates) {
+            if (this.isBatchUpdating) return;
+            
+            const oldState = { ...this.state };
+            this.state = { ...this.state, ...updates };
+            
+            // Trigger Validasi Berdasarkan Field yang Diubah
+            this.validateUpdatedFields(oldState, updates);
+            
+            // Notify Listeners
+            this.notifyListeners(oldState, this.state);
+        }
+        
+        // Batch Update untuk Operasi Atomik
+        batchUpdate(updates) {
+            this.isBatchUpdating = true;
+            const oldState = { ...this.state };
+            
+            Object.keys(updates).forEach(key => {
+                this.state[key] = updates[key];
+            });
+            
+            this.isBatchUpdating = false;
+            this.validateUpdatedFields(oldState, updates);
+            this.notifyListeners(oldState, this.state);
+        }
+        
+        // Reset State ke Default
+        reset() {
+            const oldState = { ...this.state };
+            this.state = {
+                name: '',
+                email: '',
+                password: '',
+                confirmPassword: '',
+                passwordStrength: 'empty',
+                school: '',
+                nuptk: '',
+                role: null,
+                homeroomClasses: [''],
+                subjects: [''],
+                teachingClasses: [''],
+                whatsapp: '',
+                photoFile: null,
+                photoUrl: '',
+                theme: 'dark',
+                notifications: { email: true, whatsapp: false },
+                currentStep: 1,
+                validationErrors: {},
+                isSubmitting: false,
+                isValid: { step1: false, step2: false, step3: false }
+            };
+            
+            this.notifyListeners(oldState, this.state);
+        }
+        
+        // Getter untuk Data Berdasarkan Role
+        getRoleSpecificData() {
+            if (this.state.role === 'kelas') {
+                return {
+                    type: 'homeroom',
+                    fields: this.state.homeroomClasses.filter(c => c.trim() !== '')
+                };
+            } else if (this.state.role === 'mapel') {
+                return {
+                    type: 'subject',
+                    subjects: this.state.subjects.filter(s => s.trim() !== ''),
+                    classes: this.state.teachingClasses.filter(c => c.trim() !== '')
+                };
+            }
+            return null;
+        }
+        
+        // Validasi Internal State
+        validateUpdatedFields(oldState, updates) {
+            const validationUpdates = {};
+            
+            // Validasi Password Strength
+            if ('password' in updates) {
+                validationUpdates.passwordStrength = this.calculatePasswordStrength(updates.password);
+                
+                // Auto-validate confirm password jika ada
+                if (this.state.confirmPassword) {
+                    validationUpdates.validationErrors = {
+                        ...this.state.validationErrors,
+                        confirmPassword: updates.password === this.state.confirmPassword ? 
+                            null : 'Password tidak cocok'
+                    };
+                }
+            }
+            
+            // Validasi Confirm Password
+            if ('confirmPassword' in updates) {
+                validationUpdates.validationErrors = {
+                    ...this.state.validationErrors,
+                    confirmPassword: this.state.password === updates.confirmPassword ? 
+                        null : 'Password tidak cocok'
+                };
+            }
+            
+            // Validasi Email Format
+            if ('email' in updates) {
+                validationUpdates.validationErrors = {
+                    ...this.state.validationErrors,
+                    email: this.isValidEmailFormat(updates.email) ? 
+                        null : 'Format email tidak valid'
+                };
+            }
+            
+            // Validasi NUPTK
+            if ('nuptk' in updates && updates.nuptk) {
+                validationUpdates.validationErrors = {
+                    ...this.state.validationErrors,
+                    nuptk: /^\d{16}$/.test(updates.nuptk) ? 
+                        null : 'NUPTK harus 16 digit angka'
+                };
+            }
+            
+            // Validasi WhatsApp
+            if ('whatsapp' in updates && updates.whatsapp) {
+                validationUpdates.validationErrors = {
+                    ...this.state.validationErrors,
+                    whatsapp: this.isValidWhatsapp(updates.whatsapp) ? 
+                        null : 'Format: +62xxx atau 08xxx'
+                };
+            }
+            
+            // Update state dengan hasil validasi
+            if (Object.keys(validationUpdates).length > 0) {
+                this.state = { ...this.state, ...validationUpdates };
+            }
+            
+            // Update Step Validity
+            this.updateStepValidity();
+        }
+        
+        // Helper Methods
+        calculatePasswordStrength(password) {
+            if (!password) return 'empty';
+            
+            let strength = 0;
+            if (password.length >= 8) strength++;
+            if (/[A-Z]/.test(password)) strength++;
+            if (/[a-z]/.test(password)) strength++;
+            if (/[0-9]/.test(password)) strength++;
+            if (/[^A-Za-z0-9]/.test(password)) strength++;
+            
+            if (strength <= 2) return 'weak';
+            if (strength <= 4) return 'medium';
+            return 'strong';
+        }
+        
+        isValidEmailFormat(email) {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        }
+        
+        isValidWhatsapp(whatsapp) {
+            if (!whatsapp) return true;
+            return /^(?:\+62|0)[0-9]{9,12}$/.test(whatsapp);
+        }
+        
+        updateStepValidity() {
+            const { name, email, password, confirmPassword, school, role } = this.state;
+            const roleData = this.getRoleSpecificData();
+            
+            // Step 1 Validity
+            const step1Valid = !!name.trim() && 
+                              this.isValidEmailFormat(email) && 
+                              password.length >= 8 && 
+                              password === confirmPassword;
+            
+            // Step 2 Validity
+            let step2Valid = !!school.trim() && !!role;
+            if (role === 'kelas') {
+                step2Valid = step2Valid && roleData.fields.length > 0;
+            } else if (role === 'mapel') {
+                step2Valid = step2Valid && 
+                           roleData.subjects.length > 0 && 
+                           roleData.classes.length > 0;
+            }
+            
+            // Step 3 Validity (minimal requirements)
+            const step3Valid = true; // Semua field opsional
+            
+            this.state.isValid = { step1: step1Valid, step2: step2Valid, step3: step3Valid };
+        }
+        
+        // Listener Management
+        addListener(listener) {
+            this.listeners.push(listener);
+        }
+        
+        removeListener(listener) {
+            const index = this.listeners.indexOf(listener);
+            if (index > -1) this.listeners.splice(index, 1);
+        }
+        
+        notifyListeners(oldState, newState) {
+            this.listeners.forEach(listener => listener(oldState, newState));
+        }
+        
+        // Serialization untuk Persistence (tanpa File objects)
+        serialize() {
+            return {
+                ...this.state,
+                photoFile: null, // Jangan serialize File object
+                photoUrl: this.state.photoUrl
+            };
+        }
+        
+        deserialize(data) {
+            this.batchUpdate(data);
+        }
+    }
+    
+    // ============================================================================
+    // DOM-STATE SYNC MANAGER (Two-Way Binding)
+    // ============================================================================
+    
+    class DomStateSyncManager {
+        constructor(stateManager) {
+            this.stateManager = stateManager;
+            this.eventManager = new EventManager();
+            this.init();
+        }
+        
+        init() {
+            // 1. Setup Two-Way Binding untuk Static Inputs
+            this.setupStaticInputBindings();
+            
+            // 2. Setup Dynamic Inputs dengan Event Delegation
+            this.setupDynamicInputs();
+            
+            // 3. Setup Radio & Checkbox Bindings
+            this.setupRadioCheckboxBindings();
+            
+            // 4. Setup Photo Upload Binding
+            this.setupPhotoBinding();
+            
+            // 5. Setup Theme Binding
+            this.setupThemeBinding();
+            
+            // 6. Register State Change Listeners untuk UI Updates
+            this.setupStateListeners();
+        }
+        
+        setupStaticInputBindings() {
+            const bindings = [
+                { selector: '#signup-name', stateKey: 'name' },
+                { selector: '#signup-email', stateKey: 'email' },
+                { selector: '#signup-password', stateKey: 'password' },
+                { selector: '#signup-confirm-password', stateKey: 'confirmPassword' },
+                { selector: '#signup-school', stateKey: 'school' },
+                { selector: '#signup-nuptk', stateKey: 'nuptk' },
+                { selector: '#signup-whatsapp', stateKey: 'whatsapp' },
+                { selector: '#login-email', stateKey: null }, // Login form
+                { selector: '#login-password', stateKey: null },
+                { selector: '#forgot-email', stateKey: null }
+            ];
+            
+            bindings.forEach(({ selector, stateKey }) => {
+                const element = document.querySelector(selector);
+                if (!element) return;
+                
+                // DOM → State (hanya untuk signup form)
+                if (stateKey) {
+                    this.eventManager.add(element, 'input', (e) => {
+                        this.stateManager.update({ [stateKey]: e.target.value });
+                    });
+                }
+            });
+        }
+        
+        setupDynamicInputs() {
+            // Event Delegation untuk Semua Dynamic Inputs
+            const containers = [
+                { id: 'kelas-inputs', stateKey: 'homeroomClasses' },
+                { id: 'mapel-inputs', stateKey: 'subjects' },
+                { id: 'mapel-kelas-inputs', stateKey: 'teachingClasses' }
+            ];
+            
+            containers.forEach(({ id, stateKey }) => {
+                const container = document.getElementById(id);
+                if (!container) return;
+                
+                // Input Events dengan Delegation
+                this.eventManager.add(container, 'input', (e) => {
+                    if (e.target.matches('input')) {
+                        this.updateDynamicField(id, stateKey);
+                    }
+                });
+            });
+            
+            // Setup Add/Remove Buttons dengan Delegation
+            this.setupDynamicButtons();
+        }
+        
+        setupDynamicButtons() {
+            const documentClickHandler = (e) => {
+                // Add Buttons
+                if (e.target.closest('#add-kelas')) {
+                    this.addDynamicRow('kelas-inputs', 'Kelas', 'fa-chalkboard-teacher', 'Contoh: Kelas 1A');
+                    this.updateDynamicField('kelas-inputs', 'homeroomClasses');
+                } else if (e.target.closest('#add-mapel')) {
+                    this.addDynamicRow('mapel-inputs', 'Mata Pelajaran', 'fa-book', 'Contoh: Matematika');
+                    this.updateDynamicField('mapel-inputs', 'subjects');
+                } else if (e.target.closest('#add-mapel-kelas')) {
+                    this.addDynamicRow('mapel-kelas-inputs', 'Kelas', 'fa-chalkboard', 'Contoh: 1A');
+                    this.updateDynamicField('mapel-kelas-inputs', 'teachingClasses');
+                }
+                
+                // Remove Buttons
+                const removeBtn = e.target.closest('.remove-input');
+                if (removeBtn) {
+                    const row = removeBtn.closest('.dynamic-input-row');
+                    if (row) {
+                        const container = row.closest('.dynamic-input-group');
+                        if (container) {
+                            // Pastikan minimal satu input tetap ada
+                            const rows = container.querySelectorAll('.dynamic-input-row');
+                            if (rows.length > 1) {
+                                row.remove();
+                                this.updateContainerState(container.id);
+                            } else {
+                                showAlert('warning', 'Minimal satu input harus diisi');
+                            }
+                        }
+                    }
+                }
+            };
+            
+            this.eventManager.add(document, 'click', documentClickHandler);
+        }
+        
+        updateDynamicField(containerId, stateKey) {
+            const inputs = document.querySelectorAll(`#${containerId} input`);
+            const values = Array.from(inputs).map(input => input.value.trim());
+            
+            // Simpan ke state (termasuk yang kosong untuk placeholder)
+            this.stateManager.update({ [stateKey]: values });
+        }
+        
+        updateContainerState(containerId) {
+            const stateKeyMap = {
+                'kelas-inputs': 'homeroomClasses',
+                'mapel-inputs': 'subjects',
+                'mapel-kelas-inputs': 'teachingClasses'
+            };
+            
+            const stateKey = stateKeyMap[containerId];
+            if (stateKey) {
+                this.updateDynamicField(containerId, stateKey);
+            }
+        }
+        
+        addDynamicRow(containerId, placeholder, iconClass, example) {
+            const container = document.getElementById(containerId);
+            const rows = container.querySelectorAll('.dynamic-input-row');
+            const index = rows.length;
+            
+            const row = document.createElement('div');
+            row.className = 'dynamic-input-row';
+            row.innerHTML = `
+                <div class="input-wrapper dynamic-input">
+                    <i class="fas ${iconClass} input-icon"></i>
+                    <input type="text" class="form-input small" placeholder="${example}" data-index="${index}">
+                </div>
+                <button type="button" class="btn-remove remove-input">
+                    <i class="fas fa-minus"></i>
+                </button>
+            `;
+            
+            container.appendChild(row);
+        }
+        
+        setupRadioCheckboxBindings() {
+            // Teacher Role Radio Buttons
+            const roleRadios = document.querySelectorAll('input[name="teacher-role"]');
+            roleRadios.forEach(radio => {
+                this.eventManager.add(radio, 'change', (e) => {
+                    this.stateManager.update({ role: e.target.value });
+                });
+            });
+            
+            // Notification Checkboxes
+            const notificationCheckboxes = document.querySelectorAll('#notification-prefs input');
+            notificationCheckboxes.forEach(checkbox => {
+                this.eventManager.add(checkbox, 'change', (e) => {
+                    const notifications = { ...this.stateManager.state.notifications };
+                    notifications[e.target.value] = e.target.checked;
+                    this.stateManager.update({ notifications });
+                });
+            });
+        }
+        
+        setupPhotoBinding() {
+            const photoFileInput = document.getElementById('photo-file');
+            const selfieBtn = document.getElementById('selfie-btn');
+            
+            // File Upload
+            this.eventManager.add(photoFileInput, 'change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    this.handlePhotoFile(file);
+                }
+            });
+            
+            // Selfie Button
+            this.eventManager.add(selfieBtn, 'click', () => {
+                cameraManager.openCamera();
+            });
+            
+            // Camera Capture
+            const captureBtn = document.getElementById('capture-btn');
+            const cancelCameraBtn = document.getElementById('cancel-camera-btn');
+            
+            this.eventManager.add(captureBtn, 'click', () => {
+                cameraManager.capturePhoto((photoFile) => {
+                    this.handlePhotoFile(photoFile);
+                });
+            });
+            
+            this.eventManager.add(cancelCameraBtn, 'click', () => {
+                cameraManager.closeCamera();
+            });
+        }
+        
+        async handlePhotoFile(file) {
+            // Validasi File
+            const validTypes = ['image/jpeg', 'image/png'];
+            const maxSize = 2 * 1024 * 1024; // 2MB
+            
+            if (!validTypes.includes(file.type)) {
+                showAlert('error', 'Format file harus JPG atau PNG');
+                return;
+            }
+            
+            if (file.size > maxSize) {
+                showAlert('error', 'Ukuran file maksimal 2 MB');
+                return;
+            }
+            
+            // Preview di UI
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const photoPreview = document.getElementById('photo-preview');
+                photoPreview.innerHTML = `<img src="${e.target.result}" alt="Preview Foto">`;
+                
+                // Update State
+                this.stateManager.update({ 
+                    photoFile: file,
+                    photoUrl: e.target.result 
+                });
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        setupThemeBinding() {
+            const themeOptions = document.querySelectorAll('.theme-option');
+            themeOptions.forEach(option => {
+                this.eventManager.add(option, 'click', (e) => {
+                    const theme = e.currentTarget.dataset.theme;
+                    this.stateManager.update({ theme });
+                    
+                    // Update UI
+                    themeOptions.forEach(opt => opt.classList.remove('active'));
+                    e.currentTarget.classList.add('active');
+                });
+            });
+        }
+        
+        setupStateListeners() {
+            // Listener untuk State Changes → UI Updates
+            this.stateManager.addListener((oldState, newState) => {
+                // Update Password Strength Indicator
+                if (oldState.passwordStrength !== newState.passwordStrength) {
+                    this.updatePasswordStrengthUI(newState.passwordStrength);
+                }
+                
+                // Update Validation Messages
+                if (oldState.validationErrors !== newState.validationErrors) {
+                    this.updateValidationMessages(newState.validationErrors);
+                }
+                
+                // Update Conditional Fields Visibility
+                if (oldState.role !== newState.role) {
+                    this.updateConditionalFields(newState.role);
+                }
+                
+                // Update Step Validity Indicators
+                if (oldState.isValid !== newState.isValid) {
+                    this.updateStepButtons(newState.isValid, newState.currentStep);
+                }
+                
+                // Update WhatsApp Notification Option
+                if (oldState.whatsapp !== newState.whatsapp) {
+                    this.updateWhatsappNotificationOption(newState.whatsapp);
+                }
+            });
+        }
+        
+        updatePasswordStrengthUI(strength) {
+            const strengthElement = document.getElementById('password-strength');
+            if (!strengthElement) return;
+            
+            strengthElement.className = 'password-strength';
+            if (strength !== 'empty') {
+                strengthElement.classList.add(strength);
+            }
+        }
+        
+        updateValidationMessages(errors) {
+            // Clear existing errors
+            document.querySelectorAll('.validation-message').forEach(el => {
+                el.classList.add('hidden');
+            });
+            
+            // Show new errors
+            Object.entries(errors).forEach(([field, message]) => {
+                if (message) {
+                    const errorElement = document.getElementById(`signup-${field}-error`);
+                    if (errorElement) {
+                        errorElement.textContent = message;
+                        errorElement.classList.remove('hidden');
+                    }
+                }
+            });
+        }
+        
+        updateConditionalFields(role) {
+            const kelasFields = document.getElementById('kelas-fields');
+            const mapelFields = document.getElementById('mapel-fields');
+            
+            // Reset semua
+            kelasFields.classList.remove('show');
+            mapelFields.classList.remove('show');
+            
+            // Tampilkan sesuai role
+            if (role === 'kelas') {
+                kelasFields.classList.add('show');
+            } else if (role === 'mapel') {
+                mapelFields.classList.add('show');
+            }
+        }
+        
+        updateStepButtons(validity, currentStep) {
+            const nextButtons = {
+                1: document.getElementById('next-step-1'),
+                2: document.getElementById('next-step-2'),
+                3: document.getElementById('signup-btn')
+            };
+            
+            Object.entries(nextButtons).forEach(([step, button]) => {
+                if (button) {
+                    const stepNum = parseInt(step);
+                    const isValid = validity[`step${stepNum}`];
+                    
+                    if (stepNum === currentStep) {
+                        button.disabled = !isValid;
+                        button.style.opacity = isValid ? '1' : '0.6';
+                    }
+                }
+            });
+        }
+        
+        updateWhatsappNotificationOption(whatsapp) {
+            const whatsappNotifOption = document.getElementById('whatsapp-notif-option');
+            if (!whatsappNotifOption) return;
+            
+            if (whatsapp.trim()) {
+                whatsappNotifOption.style.display = 'flex';
+            } else {
+                whatsappNotifOption.style.display = 'none';
+                const checkbox = whatsappNotifOption.querySelector('input');
+                if (checkbox) checkbox.checked = false;
+                
+                // Update state
+                const notifications = { ...this.stateManager.state.notifications };
+                notifications.whatsapp = false;
+                this.stateManager.update({ notifications });
+            }
+        }
+        
+        // Reset DOM untuk Signup Form
+        resetSignupForm() {
+            // Reset input values
+            document.querySelectorAll('#signup-form input').forEach(input => {
+                if (input.type !== 'radio' && input.type !== 'checkbox') {
+                    input.value = '';
+                }
+            });
+            
+            // Reset radio buttons
+            const defaultRole = document.querySelector('input[name="teacher-role"][value="umum"]');
+            if (defaultRole) defaultRole.checked = true;
+            
+            // Reset checkboxes
+            document.querySelectorAll('#notification-prefs input').forEach(checkbox => {
+                checkbox.checked = checkbox.value === 'email';
+            });
+            
+            // Reset photo preview
+            const photoPreview = document.getElementById('photo-preview');
+            photoPreview.innerHTML = `
+                <div class="photo-placeholder">
+                    <i class="fas fa-user-circle"></i>
+                    <span>Belum ada foto</span>
+                </div>
+            `;
+            
+            // Reset dynamic inputs
+            this.resetDynamicInputs();
+            
+            // Reset theme
+            document.querySelectorAll('.theme-option').forEach(option => {
+                option.classList.remove('active');
+                if (option.dataset.theme === 'dark') {
+                    option.classList.add('active');
+                }
+            });
+            
+            // Clear validation messages
+            document.querySelectorAll('.validation-message').forEach(el => {
+                el.classList.add('hidden');
+            });
+            
+            // Reset password strength
+            const strengthElement = document.getElementById('password-strength');
+            if (strengthElement) {
+                strengthElement.className = 'password-strength';
+            }
+        }
+        
+        resetDynamicInputs() {
+            const containers = [
+                { id: 'kelas-inputs', example: 'Contoh: Kelas 1A', icon: 'fa-chalkboard-teacher' },
+                { id: 'mapel-inputs', example: 'Contoh: Matematika', icon: 'fa-book' },
+                { id: 'mapel-kelas-inputs', example: 'Contoh: 1A', icon: 'fa-chalkboard' }
+            ];
+            
+            containers.forEach(({ id, example, icon }) => {
+                const container = document.getElementById(id);
+                if (container) {
+                    container.innerHTML = `
+                        <div class="dynamic-input-row">
+                            <div class="input-wrapper dynamic-input">
+                                <i class="fas ${icon} input-icon"></i>
+                                <input type="text" class="form-input small" placeholder="${example}" data-index="0">
+                            </div>
+                            <button type="button" class="btn-add" id="${id.replace('-inputs', '')}-add">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                    `;
+                }
+            });
+        }
+        
+        // Cleanup semua event listeners
+        cleanup() {
+            this.eventManager.removeAll();
+        }
+    }
+    
+    // ============================================================================
+    // EVENT MANAGER (Mencegah Multiple Listeners)
+    // ============================================================================
+    
+    class EventManager {
+        constructor() {
+            this.listeners = new Map();
+        }
+        
+        add(element, event, handler, options = {}) {
+            element.addEventListener(event, handler, options);
+            
+            const key = `${element.id || element.tagName}-${event}`;
+            if (!this.listeners.has(key)) {
+                this.listeners.set(key, []);
+            }
+            
+            this.listeners.get(key).push({ element, event, handler, options });
+        }
+        
+        removeAll() {
+            this.listeners.forEach((listeners, key) => {
+                listeners.forEach(({ element, event, handler, options }) => {
+                    element.removeEventListener(event, handler, options);
+                });
+            });
+            this.listeners.clear();
+        }
+        
+        remove(element, event, handler) {
+            const key = `${element.id || element.tagName}-${event}`;
+            const listeners = this.listeners.get(key);
+            
+            if (listeners) {
+                const index = listeners.findIndex(l => l.handler === handler);
+                if (index > -1) {
+                    const { element: el, event: evt, handler: hdl, options } = listeners[index];
+                    el.removeEventListener(evt, hdl, options);
+                    listeners.splice(index, 1);
+                    
+                    if (listeners.length === 0) {
+                        this.listeners.delete(key);
+                    }
+                }
+            }
+        }
+    }
+    
+    // ============================================================================
+    // CAMERA MANAGER
+    // ============================================================================
+    
+    class CameraManager {
+        constructor() {
+            this.stream = null;
+            this.cameraContainer = document.getElementById('camera-container');
+            this.cameraPreview = document.getElementById('camera-preview');
+            this.isInitialized = false;
+        }
+        
+        async openCamera() {
+            try {
+                this.stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: 'user',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    } 
+                });
+                
+                this.cameraPreview.srcObject = this.stream;
+                this.cameraContainer.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+                this.isInitialized = true;
+                
+            } catch (error) {
+                console.error('Error accessing camera:', error);
+                showAlert('error', 'Tidak dapat mengakses kamera. Pastikan Anda memberikan izin.');
+            }
+        }
+        
+        capturePhoto(callback) {
+            if (!this.stream || !this.isInitialized) {
+                showAlert('error', 'Kamera belum diinisialisasi');
+                return;
+            }
+            
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            
+            canvas.width = this.cameraPreview.videoWidth;
+            canvas.height = this.cameraPreview.videoHeight;
+            
+            context.drawImage(this.cameraPreview, 0, 0, canvas.width, canvas.height);
+            
+            canvas.toBlob((blob) => {
+                const file = new File([blob], 'selfie.jpg', { type: 'image/jpeg' });
+                callback(file);
+                this.closeCamera();
+            }, 'image/jpeg', 0.9);
+        }
+        
+        closeCamera() {
+            if (this.stream) {
+                this.stream.getTracks().forEach(track => track.stop());
+                this.stream = null;
+            }
+            
+            this.cameraContainer.style.display = 'none';
+            document.body.style.overflow = 'auto';
+            this.isInitialized = false;
+        }
+    }
+    
+    // ============================================================================
+    // STATE PERSISTENCE LAYER
+    // ============================================================================
+    
+    class StatePersistence {
+        constructor(stateManager) {
+            this.stateManager = stateManager;
+            this.STORAGE_KEY = 'smartMudarris_signup_state';
+            this.autoSaveEnabled = false;
+        }
+        
+        enableAutoSave() {
+            if (this.autoSaveEnabled) return;
+            
+            this.stateManager.addListener(() => {
+                this.save();
+            });
+            
+            this.autoSaveEnabled = true;
+        }
+        
+        disableAutoSave() {
+            // Untuk disable, kita perlu remove listener
+            // Karena state manager tidak support remove listener spesifik,
+            // kita akan implementasi dengan flag
+            this.autoSaveEnabled = false;
+        }
+        
+        save() {
+            if (!this.autoSaveEnabled) return;
+            
+            try {
+                const stateData = this.stateManager.serialize();
+                localStorage.setItem(this.STORAGE_KEY, JSON.stringify(stateData));
+            } catch (error) {
+                console.warn('Failed to save state:', error);
+            }
+        }
+        
+        load() {
+            try {
+                const saved = localStorage.getItem(this.STORAGE_KEY);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    this.stateManager.deserialize(parsed);
+                    return true;
+                }
+            } catch (error) {
+                console.warn('Failed to load state:', error);
+                this.clear();
+            }
+            return false;
+        }
+        
+        clear() {
+            localStorage.removeItem(this.STORAGE_KEY);
+        }
+    }
+    
+    // ============================================================================
+    // VALIDATION MANAGER (State-Based)
+    // ============================================================================
+    
+    class ValidationManager {
+        constructor(stateManager) {
+            this.stateManager = stateManager;
+        }
+        
+        validateStep(step) {
+            const state = this.stateManager.state;
+            
+            switch (step) {
+                case 1:
+                    return this.validateStep1(state);
+                case 2:
+                    return this.validateStep2(state);
+                case 3:
+                    return this.validateStep3(state);
+                default:
+                    return { isValid: false, errors: ['Step tidak valid'] };
+            }
+        }
+        
+        validateStep1(state) {
+            const errors = [];
+            
+            if (!state.name.trim()) errors.push('Nama wajib diisi');
+            if (!state.email.trim()) errors.push('Email wajib diisi');
+            if (!this.isValidEmail(state.email)) errors.push('Format email tidak valid');
+            if (state.password.length < 8) errors.push('Password minimal 8 karakter');
+            if (state.password !== state.confirmPassword) errors.push('Konfirmasi password tidak cocok');
+            
+            return {
+                isValid: errors.length === 0,
+                errors
+            };
+        }
+        
+        validateStep2(state) {
+            const errors = [];
+            
+            if (!state.school.trim()) errors.push('Nama sekolah wajib diisi');
+            if (!state.role) errors.push('Peran guru harus dipilih');
+            
+            const roleData = this.stateManager.getRoleSpecificData();
+            if (state.role === 'kelas') {
+                if (!roleData.fields.length) errors.push('Minimal satu kelas wali harus diisi');
+            } else if (state.role === 'mapel') {
+                if (!roleData.subjects.length) errors.push('Minimal satu mata pelajaran harus diisi');
+                if (!roleData.classes.length) errors.push('Minimal satu kelas ajar harus diisi');
+            }
+            
+            return {
+                isValid: errors.length === 0,
+                errors
+            };
+        }
+        
+        validateStep3(state) {
+            const errors = [];
+            
+            if (state.whatsapp && !this.isValidWhatsapp(state.whatsapp)) {
+                errors.push('Format WhatsApp tidak valid');
+            }
+            
+            if (state.nuptk && !/^\d{16}$/.test(state.nuptk)) {
+                errors.push('NUPTK harus 16 digit angka');
+            }
+            
+            if (state.photoFile && !['image/jpeg', 'image/png'].includes(state.photoFile.type)) {
+                errors.push('Foto harus JPG atau PNG');
+            }
+            
+            return {
+                isValid: errors.length === 0,
+                errors
+            };
+        }
+        
+        validateCompleteSignup() {
+            const step1 = this.validateStep1(this.stateManager.state);
+            const step2 = this.validateStep2(this.stateManager.state);
+            const step3 = this.validateStep3(this.stateManager.state);
+            
+            const allErrors = [...step1.errors, ...step2.errors, ...step3.errors];
+            
+            return {
+                isValid: step1.isValid && step2.isValid && step3.isValid,
+                errors: allErrors
+            };
+        }
+        
+        // Helper Methods
+        isValidEmail(email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(email);
+        }
+        
+        isValidWhatsapp(whatsapp) {
+            if (!whatsapp) return true;
+            return /^(?:\+62|0)[0-9]{9,12}$/.test(whatsapp);
+        }
+    }
+    
+    // ============================================================================
+    // AUTH & APPLICATION MANAGER
+    // ============================================================================
+    
+    class AuthManager {
+        constructor() {
+            this.currentUser = null;
+            this.currentTeacher = null;
+            this.authInitialized = false;
+        }
+        
+        async handleLogin(email, password) {
+            try {
+                const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+                if (error) throw error;
+                
+                this.currentUser = data.user;
+                await this.loadUserProfile();
+                return { success: true, user: data.user };
+                
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+        
+        async handleSignup(signupData) {
+            try {
+                // 1. Auth dengan Supabase
+                const { data: authData, error: authError } = await supabase.auth.signUp({
+                    email: signupData.email,
+                    password: signupData.password
+                });
+                
+                if (authError) throw authError;
+                
+                if (!authData.user) {
+                    return { success: true, needsVerification: true };
+                }
+                
+                // 2. Upload Photo jika ada
+                let photoUrl = null;
+                if (signupData.photoFile) {
+                    const extension = signupData.photoFile.type.split('/')[1];
+                    const fileName = `${authData.user.id}_profile.${extension}`;
+                    
+                    const { error: uploadError } = await supabase.storage
+                        .from('profile-photos')
+                        .upload(fileName, signupData.photoFile, { upsert: true });
+                    
+                    if (uploadError) throw uploadError;
+                    
+                    const { data: publicUrlData } = supabase.storage
+                        .from('profile-photos')
+                        .getPublicUrl(fileName);
+                    
+                    if (publicUrlData?.publicUrl) {
+                        photoUrl = publicUrlData.publicUrl;
+                    }
+                }
+                
+                // 3. Insert Teacher Profile
+                const roleData = {
+                    homeroom_classes: signupData.role === 'kelas' ? signupData.homeroomClasses : null,
+                    subjects: signupData.role === 'mapel' ? signupData.subjects : null,
+                    teaching_classes: signupData.role === 'mapel' ? signupData.teachingClasses : null
+                };
+                
+                const { error: profileError } = await supabase
+                    .from('teachers')
+                    .insert({
+                        id: authData.user.id,
+                        name: signupData.name,
+                        email: signupData.email,
+                        school: signupData.school,
+                        role: signupData.role,
+                        ...roleData,
+                        whatsapp: signupData.whatsapp || null,
+                        nuptk: signupData.nuptk || null,
+                        profile_photo_url: photoUrl,
+                        preferences: {
+                            theme: signupData.theme,
+                            notifications: signupData.notifications
+                        }
+                    });
+                
+                if (profileError) throw profileError;
+                
+                // 4. Auto Login jika tidak butuh verifikasi email
+                if (!authData.session) {
+                    const loginResult = await this.handleLogin(signupData.email, signupData.password);
+                    if (!loginResult.success) throw new Error(loginResult.error);
+                }
+                
+                return { success: true, needsVerification: false };
+                
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+        
+        async handleForgotPassword(email) {
+            try {
+                const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                    redirectTo: `${window.location.origin}/reset-password.html`,
+                });
+                
+                if (error) throw error;
+                return { success: true };
+                
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+        
+        async handleLogout() {
+            try {
+                const { error } = await supabase.auth.signOut();
+                if (error) throw error;
+                
+                this.currentUser = null;
+                this.currentTeacher = null;
+                this.authInitialized = false;
+                
+                return { success: true };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+        
+        async loadUserProfile() {
+            if (!this.currentUser) return { success: false, error: 'No user logged in' };
+            
+            try {
+                const { data: teacherData, error } = await supabase
+                    .from('teachers')
+                    .select('*')
+                    .eq('id', this.currentUser.id)
+                    .single();
+                
+                if (error) throw error;
+                
+                this.currentTeacher = teacherData;
+                return { success: true, data: teacherData };
+                
+            } catch (error) {
+                console.error('Error loading teacher profile:', error);
+                return { success: false, error: error.message };
+            }
+        }
+        
+        getCurrentUser() {
+            return this.currentUser;
+        }
+        
+        getCurrentTeacher() {
+            return this.currentTeacher;
+        }
+    }
+    
+    // ============================================================================
+    // GLOBAL INSTANCES & APPLICATION STATE
+    // ============================================================================
+    
+    // Inisialisasi Manager Instances
+    const stateManager = new SignupStateManager();
+    const domSyncManager = new DomStateSyncManager(stateManager);
+    const validationManager = new ValidationManager(stateManager);
+    const cameraManager = new CameraManager();
+    const authManager = new AuthManager();
+    const statePersistence = new StatePersistence(stateManager);
+    
+    // Global Application State
     let currentStep = 1;
-    let authInitialized = false;
-    let photoFile = null;
-    let photoUrl = null;
-    let stream = null;
-
-    // DOM Elements
-    const loadingScreen = document.querySelector('.loading-screen');
-    const authContainer = document.getElementById('auth-container');
-    const dashboardContainer = document.getElementById('dashboard-container');
-    const cameraContainer = document.getElementById('camera-container');
-    const cameraPreview = document.getElementById('camera-preview');
-    const captureBtn = document.getElementById('capture-btn');
-    const cancelCameraBtn = document.getElementById('cancel-camera-btn');
     
-    // Form containers
-    const loginForm = document.getElementById('login-form');
-    const signupForm = document.getElementById('signup-form');
-    const forgotPasswordForm = document.getElementById('forgot-password-form');
+    // ============================================================================
+    // DOM ELEMENTS CACHE
+    // ============================================================================
     
-    // Progress steps
-    const signupProgress = document.getElementById('signup-progress');
-    const signupSteps = document.querySelectorAll('.signup-step');
-    const progressSteps = document.querySelectorAll('.progress-step');
+    const domElements = {
+        // Containers
+        loadingScreen: document.querySelector('.loading-screen'),
+        authContainer: document.getElementById('auth-container'),
+        dashboardContainer: document.getElementById('dashboard-container'),
+        cameraContainer: document.getElementById('camera-container'),
+        
+        // Forms
+        loginForm: document.getElementById('login-form'),
+        signupForm: document.getElementById('signup-form'),
+        forgotPasswordForm: document.getElementById('forgot-password-form'),
+        
+        // Progress & Steps
+        signupProgress: document.getElementById('signup-progress'),
+        signupSteps: document.querySelectorAll('.signup-step'),
+        progressSteps: document.querySelectorAll('.progress-step'),
+        
+        // Alerts
+        alertError: document.getElementById('alert-error'),
+        alertSuccess: document.getElementById('alert-success'),
+        alertErrorMessage: document.getElementById('alert-error-message'),
+        alertSuccessMessage: document.getElementById('alert-success-message'),
+        
+        // Buttons & Links
+        showSignupFormBtn: document.getElementById('show-signup-form'),
+        showLoginFormBtn: document.getElementById('show-login-form-from-signup'),
+        showLoginFormFromForgotBtn: document.getElementById('show-login-form-from-forgot'),
+        forgotPasswordLink: document.getElementById('forgot-password-link'),
+        logoutBtn: document.getElementById('logout-btn'),
+        sidebarToggle: document.getElementById('sidebar-toggle'),
+        dashboardSidebar: document.getElementById('dashboard-sidebar'),
+        
+        // Step Navigation
+        nextStep1Btn: document.getElementById('next-step-1'),
+        prevStep2Btn: document.getElementById('prev-step-2'),
+        nextStep2Btn: document.getElementById('next-step-2'),
+        prevStep3Btn: document.getElementById('prev-step-3'),
+        signupBtn: document.getElementById('signup-btn'),
+        
+        // Dashboard Elements
+        dashboardUsername: document.getElementById('dashboard-username'),
+        dashboardRole: document.getElementById('dashboard-role'),
+        dashboardFullname: document.getElementById('dashboard-fullname'),
+        dashboardEmail: document.getElementById('dashboard-email'),
+        dashboardSchool: document.getElementById('dashboard-school'),
+        dashboardNuptk: document.getElementById('dashboard-nuptk'),
+        dashboardTeacherRole: document.getElementById('dashboard-teacher-role'),
+        dashboardClassesInfo: document.getElementById('dashboard-classes-info'),
+        welcomeUsername: document.getElementById('welcome-username'),
+        userAvatar: document.getElementById('user-avatar'),
+        dashboardAvatarLarge: document.getElementById('dashboard-avatar-large'),
+        authFormTitle: document.getElementById('auth-form-title'),
+        authFormSubtitle: document.getElementById('auth-form-subtitle')
+    };
     
-    // Alert elements
-    const alertError = document.getElementById('alert-error');
-    const alertSuccess = document.getElementById('alert-success');
-    const alertErrorMessage = document.getElementById('alert-error-message');
-    const alertSuccessMessage = document.getElementById('alert-success-message');
+    // ============================================================================
+    // APPLICATION INITIALIZATION
+    // ============================================================================
     
-    // Buttons and links
-    const showSignupFormBtn = document.getElementById('show-signup-form');
-    const showLoginFormBtn = document.getElementById('show-login-form-from-signup');
-    const showLoginFormFromForgotBtn = document.getElementById('show-login-form-from-forgot');
-    const forgotPasswordLink = document.getElementById('forgot-password-link');
-    const logoutBtn = document.getElementById('logout-btn');
-    const sidebarToggle = document.getElementById('sidebar-toggle');
-    const dashboardSidebar = document.getElementById('dashboard-sidebar');
-    
-    // Step navigation buttons
-    const nextStep1Btn = document.getElementById('next-step-1');
-    const prevStep2Btn = document.getElementById('prev-step-2');
-    const nextStep2Btn = document.getElementById('next-step-2');
-    const prevStep3Btn = document.getElementById('prev-step-3');
-    const signupBtn = document.getElementById('signup-btn');
-    
-    // Dynamic input buttons
-    const addKelasBtn = document.getElementById('add-kelas');
-    const addMapelBtn = document.getElementById('add-mapel');
-    const addMapelKelasBtn = document.getElementById('add-mapel-kelas');
-    
-    // Photo upload
-    const photoPreview = document.getElementById('photo-preview');
-    const uploadPhotoBtn = document.getElementById('upload-photo-btn');
-    const selfieBtn = document.getElementById('selfie-btn');
-    const photoFileInput = document.getElementById('photo-file');
-    
-    // Theme toggle
-    const themeOptions = document.querySelectorAll('.theme-option');
-    
-    // User display elements
-    const dashboardUsername = document.getElementById('dashboard-username');
-    const dashboardRole = document.getElementById('dashboard-role');
-    const dashboardFullname = document.getElementById('dashboard-fullname');
-    const dashboardEmail = document.getElementById('dashboard-email');
-    const dashboardSchool = document.getElementById('dashboard-school');
-    const dashboardNuptk = document.getElementById('dashboard-nuptk');
-    const dashboardTeacherRole = document.getElementById('dashboard-teacher-role');
-    const dashboardClassesInfo = document.getElementById('dashboard-classes-info');
-    const welcomeUsername = document.getElementById('welcome-username');
-    const userAvatar = document.getElementById('user-avatar');
-    const dashboardAvatarLarge = document.getElementById('dashboard-avatar-large');
-    const authFormTitle = document.getElementById('auth-form-title');
-    const authFormSubtitle = document.getElementById('auth-form-subtitle');
-
-    // Inisialisasi Aplikasi
     async function initApp() {
+        // 1. Setup Loading Screen
         setTimeout(() => {
-            loadingScreen.style.opacity = '0';
+            domElements.loadingScreen.style.opacity = '0';
             setTimeout(() => {
-                loadingScreen.style.display = 'none';
+                domElements.loadingScreen.style.display = 'none';
             }, 500);
         }, 1500);
-
+        
         try {
+            // 2. Check Existing Session
             const { data: { session }, error } = await supabase.auth.getSession();
             if (error) throw error;
-
-            if (session && !authInitialized) {
-                authInitialized = true;
-                currentUser = session.user;
-                await loadUserProfile();
-                showDashboard();
+            
+            if (session) {
+                authManager.authInitialized = true;
+                authManager.currentUser = session.user;
+                const profileResult = await authManager.loadUserProfile();
+                
+                if (profileResult.success) {
+                    updateDashboardUI(authManager.currentTeacher);
+                    showDashboard();
+                } else {
+                    showAuth();
+                }
             } else {
                 showAuth();
-                setupAuthForms();
             }
-
+            
+            // 3. Setup Event Listeners
             setupEventListeners();
-            setupDynamicInputs();
-            setupConditionalFields();
-            setupPhotoUpload();
-            setupCamera();
+            
+            // 4. Setup Password Toggles
+            setupPasswordToggles();
+            
+            // 5. Enable State Persistence
+            statePersistence.enableAutoSave();
+            
+            // 6. Load Saved State jika ada
+            statePersistence.load();
+            
         } catch (err) {
             console.error('Init error:', err);
             showAuth();
         }
     }
-
-    // Setup Event Listeners
+    
     function setupEventListeners() {
-        sidebarToggle.addEventListener('click', () => {
-            dashboardSidebar.classList.toggle('active');
+        // Sidebar Toggle
+        domElements.sidebarToggle.addEventListener('click', () => {
+            domElements.dashboardSidebar.classList.toggle('active');
         });
-
-        showSignupFormBtn.addEventListener('click', (e) => {
+        
+        // Form Navigation
+        domElements.showSignupFormBtn.addEventListener('click', (e) => {
             e.preventDefault();
             if (!SIGNUP_ENABLED) {
                 showAlert('error', 'Pendaftaran saat ini hanya untuk pengguna internal. Hubungi admin untuk akses.');
                 return;
             }
             showForm('signup');
-            resetSignupForm();
             setupPasswordToggles();
         });
-
-        showLoginFormBtn.addEventListener('click', (e) => {
+        
+        domElements.showLoginFormBtn.addEventListener('click', (e) => {
             e.preventDefault();
             showForm('login');
             setupPasswordToggles();
         });
-
-        showLoginFormFromForgotBtn.addEventListener('click', (e) => {
+        
+        domElements.showLoginFormFromForgotBtn.addEventListener('click', (e) => {
             e.preventDefault();
             showForm('login');
             setupPasswordToggles();
         });
-
-        forgotPasswordLink.addEventListener('click', (e) => {
+        
+        domElements.forgotPasswordLink.addEventListener('click', (e) => {
             e.preventDefault();
             showForm('forgot');
             setupPasswordToggles();
         });
-
-        logoutBtn.addEventListener('click', handleLogout);
-
-        nextStep1Btn.addEventListener('click', () => {
-            if (validateStep1()) goToStep(2);
-        });
         
-        prevStep2Btn.addEventListener('click', () => goToStep(1));
+        // Logout
+        domElements.logoutBtn.addEventListener('click', handleLogout);
         
-        nextStep2Btn.addEventListener('click', () => {
-            if (validateStep2()) goToStep(3);
-        });
-        
-        prevStep3Btn.addEventListener('click', () => goToStep(2));
-        
-        themeOptions.forEach(option => {
-            option.addEventListener('click', () => {
-                themeOptions.forEach(opt => opt.classList.remove('active'));
-                option.classList.add('active');
-            });
-        });
-        
-        const whatsappInput = document.getElementById('signup-whatsapp');
-        const whatsappNotifOption = document.getElementById('whatsapp-notif-option');
-        
-        whatsappInput.addEventListener('input', () => {
-            const whatsappValue = whatsappInput.value.trim();
-            if (whatsappValue) {
-                whatsappNotifOption.style.display = 'flex';
+        // Step Navigation
+        domElements.nextStep1Btn.addEventListener('click', () => {
+            const validation = validationManager.validateStep(1);
+            if (validation.isValid) {
+                goToStep(2);
             } else {
-                whatsappNotifOption.style.display = 'none';
-                const whatsappCheckbox = whatsappNotifOption.querySelector('input');
-                whatsappCheckbox.checked = false;
+                showAlert('error', validation.errors[0]);
             }
         });
         
-        setupRealTimeValidation();
+        domElements.prevStep2Btn.addEventListener('click', () => goToStep(1));
+        
+        domElements.nextStep2Btn.addEventListener('click', () => {
+            const validation = validationManager.validateStep(2);
+            if (validation.isValid) {
+                goToStep(3);
+            } else {
+                showAlert('error', validation.errors[0]);
+            }
+        });
+        
+        domElements.prevStep3Btn.addEventListener('click', () => goToStep(2));
+        
+        // Form Submissions
+        domElements.loginForm.addEventListener('submit', handleLogin);
+        domElements.signupForm.addEventListener('submit', handleSignup);
+        domElements.forgotPasswordForm.addEventListener('submit', handleForgotPassword);
     }
-
-    // Setup Fungsi Bantuan
-    function setupDynamicInputs() {
-        addKelasBtn.addEventListener('click', () => {
-            addDynamicInput('kelas-inputs', 'Kelas', 'fa-chalkboard-teacher', 'Contoh: Kelas 2B');
-        });
+    
+    function setupPasswordToggles() {
+        const toggles = [
+            { inputId: 'login-password', toggleId: 'toggle-login-password' },
+            { inputId: 'signup-password', toggleId: 'toggle-signup-password' },
+            { inputId: 'signup-confirm-password', toggleId: 'toggle-signup-confirm-password' }
+        ];
         
-        addMapelBtn.addEventListener('click', () => {
-            addDynamicInput('mapel-inputs', 'Mata Pelajaran', 'fa-book', 'Contoh: IPA');
-        });
-        
-        addMapelKelasBtn.addEventListener('click', () => {
-            addDynamicInput('mapel-kelas-inputs', 'Kelas', 'fa-chalkboard', 'Contoh: 2B');
-        });
-    }
-
-    function setupConditionalFields() {
-        const roleInputs = document.querySelectorAll('input[name="teacher-role"]');
-        
-        roleInputs.forEach(input => {
-            input.addEventListener('change', () => {
-                const role = input.value;
-                signupState.role = role;
-                
-                document.getElementById('kelas-fields').classList.remove('show');
-                document.getElementById('mapel-fields').classList.remove('show');
-                
-                if (role === 'kelas') {
-                    document.getElementById('kelas-fields').classList.add('show');
-                } else if (role === 'mapel') {
-                    document.getElementById('mapel-fields').classList.add('show');
-                }
-            });
-        });
-    }
-
-    function setupPhotoUpload() {
-        uploadPhotoBtn.addEventListener('click', () => photoFileInput.click());
-        
-        photoFileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) validateAndPreviewPhoto(file);
-        });
-        
-        selfieBtn.addEventListener('click', openCamera);
-        captureBtn.addEventListener('click', capturePhoto);
-        cancelCameraBtn.addEventListener('click', closeCamera);
-    }
-
-    function setupCamera() {}
-
-    function setupRealTimeValidation() {
-        const passwordInput = document.getElementById('signup-password');
-        const passwordStrength = document.getElementById('password-strength');
-        
-        passwordInput.addEventListener('input', () => {
-            const password = passwordInput.value;
-            checkPasswordStrength(password, passwordStrength);
+        toggles.forEach(({ inputId, toggleId }) => {
+            const input = document.getElementById(inputId);
+            const toggle = document.getElementById(toggleId);
             
-            const confirmPassword = document.getElementById('signup-confirm-password').value;
-            if (confirmPassword) validateConfirmPassword();
-        });
-        
-        const confirmInput = document.getElementById('signup-confirm-password');
-        confirmInput.addEventListener('input', validateConfirmPassword);
-        
-        const nuptkInput = document.getElementById('signup-nuptk');
-        nuptkInput.addEventListener('input', () => validateNuptk(nuptkInput.value));
-        
-        const whatsappInput = document.getElementById('signup-whatsapp');
-        whatsappInput.addEventListener('input', () => validateWhatsappUI(whatsappInput.value));
-        
-        const emailInput = document.getElementById('signup-email');
-        emailInput.addEventListener('blur', () => validateEmail(emailInput.value));
-    }
-
-    // Fungsi Validasi
-    function validateSignupStep1Data({ name, email, password, confirmPassword }) {
-        if (!name) return 'Nama wajib diisi';
-        if (!email) return 'Email wajib diisi';
-        if (!isValidEmail(email)) return 'Format email tidak valid';
-        if (!password || password.length < 8) return 'Password minimal 8 karakter';
-        if (password !== confirmPassword) return 'Konfirmasi password tidak cocok';
-        return null;
-    }
-
-    function validateSignupStep2Data({ school, role, homeroomClasses, subjects, teachingClasses }) {
-        if (!school) return 'Nama sekolah wajib diisi';
-        if (!role) return 'Peran guru harus dipilih';
-
-        if (role === 'kelas') {
-            if (!homeroomClasses || homeroomClasses.length === 0) {
-                return 'Minimal satu kelas wali harus diisi';
+            if (toggle && input) {
+                toggle.addEventListener('click', () => {
+                    const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+                    input.setAttribute('type', type);
+                    toggle.innerHTML = type === 'password' ? 
+                        '<i class="fas fa-eye"></i>' : 
+                        '<i class="fas fa-eye-slash"></i>';
+                });
             }
-        } else if (role === 'mapel') {
-            if (!subjects || subjects.length === 0) return 'Minimal satu mapel harus diisi';
-            if (!teachingClasses || teachingClasses.length === 0) return 'Minimal satu kelas ajar harus diisi';
-        }
-
-        return null;
-    }
-
-    function validateSignupStep3Data({ whatsapp, nuptk, photoFile }) {
-        if (!isValidWhatsapp(whatsapp)) return 'Format WhatsApp tidak valid';
-        if (nuptk && !/^\d{16}$/.test(nuptk)) return 'NUPTK harus 16 digit';
-        if (photoFile && !['image/jpeg', 'image/png'].includes(photoFile.type)) {
-            return 'Foto harus JPG atau PNG';
-        }
-        return null;
-    }
-
-    function validateStep1() {
-        const name = document.getElementById('signup-name').value.trim();
-        const email = document.getElementById('signup-email').value.trim();
-        const password = document.getElementById('signup-password').value;
-        const confirmPassword = document.getElementById('signup-confirm-password').value;
-        
-        const error = validateSignupStep1Data({ name, email, password, confirmPassword });
-        
-        if (error) {
-            showAlert('error', error);
-            return false;
-        }
-        
-        return true;
-    }
-
-    function validateStep2() {
-        const school = document.getElementById('signup-school').value.trim();
-        const role = signupState.role;
-
-        if (!school) {
-            showAlert('error', 'Nama sekolah wajib diisi');
-            return false;
-        }
-
-        if (!role) {
-            showAlert('error', 'Pilih peran guru terlebih dahulu');
-            return false;
-        }
-
-        const homeroomClasses = role === 'kelas' ? collectInputValues('kelas-inputs') : [];
-        const subjects = role === 'mapel' ? collectInputValues('mapel-inputs') : [];
-        const teachingClasses = role === 'mapel' ? collectInputValues('mapel-kelas-inputs') : [];
-
-        const error = validateSignupStep2Data({
-            school,
-            role,
-            homeroomClasses,
-            subjects,
-            teachingClasses
         });
-
-        if (error) {
-            showAlert('error', error);
-            return false;
-        }
-
-        return true;
     }
-
-    function validateStep3() {
-        const whatsapp = document.getElementById('signup-whatsapp').value.trim();
-        const nuptk = document.getElementById('signup-nuptk').value.trim();
+    
+    // ============================================================================
+    // FORM HANDLERS (State-Based)
+    // ============================================================================
+    
+    async function handleLogin(e) {
+        e.preventDefault();
         
-        const error = validateSignupStep3Data({ whatsapp, nuptk, photoFile });
+        const email = document.getElementById('login-email').value.trim();
+        const password = document.getElementById('login-password').value;
+        const loginBtn = document.getElementById('login-btn');
         
-        if (error) {
-            showAlert('error', error);
-            return false;
+        if (!email || !password) {
+            showAlert('error', 'Email dan password harus diisi.');
+            return;
         }
         
-        return true;
+        // Save button state
+        const originalBtnHTML = loginBtn.innerHTML;
+        
+        try {
+            loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Memproses...</span>';
+            loginBtn.disabled = true;
+            
+            const result = await authManager.handleLogin(email, password);
+            
+            if (result.success) {
+                updateDashboardUI(authManager.getCurrentTeacher());
+                showDashboard();
+                domElements.loginForm.reset();
+            } else {
+                showAlert('error', result.error || 'Login gagal. Periksa email dan password Anda.');
+            }
+            
+        } catch (error) {
+            showAlert('error', error.message || 'Terjadi kesalahan saat login.');
+        } finally {
+            loginBtn.innerHTML = originalBtnHTML;
+            loginBtn.disabled = false;
+        }
     }
-
-    // Handle Signup
+    
     async function handleSignup(e) {
         e.preventDefault();
-
-        const originalBtnHTML = signupBtn.innerHTML;
-
-        try {
-            signupBtn.disabled = true;
-            signupBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mohon tunggu...';
-
-            // Data Dasar
-            const name = document.getElementById('signup-name').value.trim();
-            const email = document.getElementById('signup-email').value.trim();
-            const password = document.getElementById('signup-password').value;
-            const confirmPassword = document.getElementById('signup-confirm-password').value;
-
-            // Data Profesional
-            const school = document.getElementById('signup-school').value.trim();
-            const role = signupState.role;
-
-            if (!role) {
-                showAlert('error', 'Silakan pilih peran guru terlebih dahulu.');
-                goToStep(2);
-                return;
-            }
-
-            const homeroomClasses = role === 'kelas' ? collectInputValues('kelas-inputs') : null;
-            const subjects = role === 'mapel' ? collectInputValues('mapel-inputs') : null;
-            const teachingClasses = role === 'mapel' ? collectInputValues('mapel-kelas-inputs') : null;
-
-            // Data Tambahan
-            const whatsapp = document.getElementById('signup-whatsapp').value.trim();
-            const nuptk = document.getElementById('signup-nuptk').value.trim();
-
-            const photoInput = document.getElementById('signup-photo');
-            const finalPhotoFile = photoInput?.files?.[0] || photoFile || null;
-
-            // Supabase Auth Signup
-            const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
-            if (authError) throw authError;
-
-            if (!authData.user) {
-                showAlert('success', 'Akun berhasil dibuat. Silakan cek email untuk verifikasi.');
-                return;
-            }
-
-            const user = authData.user;
-
-            // Kumpulkan Semua Data
-            const collectedData = {
-                name,
-                email,
-                password,
-                confirmPassword,
-                school,
-                role,
-                homeroomClasses,
-                subjects,
-                teachingClasses,
-                whatsapp,
-                nuptk,
-                photoFile: finalPhotoFile
-            };
-
-            // Validasi Final
-            const step1Error = validateSignupStep1Data(collectedData);
-            if (step1Error) {
-                showAlert('error', step1Error);
+        
+        // 1. Validasi Final menggunakan State
+        const validation = validationManager.validateCompleteSignup();
+        if (!validation.isValid) {
+            showAlert('error', validation.errors[0]);
+            // Navigasi ke step yang bermasalah
+            if (validation.errors.some(e => e.includes('Nama') || e.includes('Email') || e.includes('Password'))) {
                 goToStep(1);
-                return;
-            }
-
-            const step2Error = validateSignupStep2Data(collectedData);
-            if (step2Error) {
-                showAlert('error', step2Error);
+            } else if (validation.errors.some(e => e.includes('sekolah') || e.includes('Peran') || e.includes('kelas') || e.includes('mata pelajaran'))) {
                 goToStep(2);
-                return;
-            }
-
-            const step3Error = validateSignupStep3Data(collectedData);
-            if (step3Error) {
-                showAlert('error', step3Error);
+            } else {
                 goToStep(3);
-                return;
             }
-
-            // Upload Foto
-            let photoUrl = null;
-
-            if (finalPhotoFile) {
-                const extension = finalPhotoFile.type.split('/')[1];
-                const fileName = `${user.id}_profile.${extension}`;
-
-                const { error: uploadError } = await supabase.storage
-                    .from('profile-photos')
-                    .upload(fileName, finalPhotoFile, { upsert: true });
-
-                if (uploadError) throw uploadError;
-
-                const { data: publicUrlData } = supabase.storage
-                    .from('profile-photos')
-                    .getPublicUrl(fileName);
-
-                if (publicUrlData && publicUrlData.publicUrl) {
-                    photoUrl = publicUrlData.publicUrl;
+            return;
+        }
+        
+        // 2. Ambil semua data dari State Manager
+        const signupData = {
+            name: stateManager.state.name,
+            email: stateManager.state.email,
+            password: stateManager.state.password,
+            school: stateManager.state.school,
+            nuptk: stateManager.state.nuptk,
+            role: stateManager.state.role,
+            homeroomClasses: stateManager.getRoleSpecificData()?.fields || [],
+            subjects: stateManager.getRoleSpecificData()?.subjects || [],
+            teachingClasses: stateManager.getRoleSpecificData()?.classes || [],
+            whatsapp: stateManager.state.whatsapp,
+            photoFile: stateManager.state.photoFile,
+            theme: stateManager.state.theme,
+            notifications: stateManager.state.notifications
+        };
+        
+        // 3. Save button state
+        const originalBtnHTML = domElements.signupBtn.innerHTML;
+        
+        try {
+            domElements.signupBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mohon tunggu...';
+            domElements.signupBtn.disabled = true;
+            
+            // 4. Proses Signup melalui AuthManager
+            const result = await authManager.handleSignup(signupData);
+            
+            if (result.success) {
+                if (result.needsVerification) {
+                    showAlert('success', 'Akun berhasil dibuat. Silakan cek email untuk verifikasi.');
+                    // Reset form dan kembali ke login
+                    resetSignupForm();
+                    showForm('login');
+                } else {
+                    showAlert('success', 'Akun berhasil dibuat! Selamat datang ✨');
+                    // Update UI dashboard
+                    updateDashboardUI(authManager.getCurrentTeacher());
                 }
+            } else {
+                showAlert('error', result.error || 'Terjadi kesalahan saat pendaftaran.');
             }
-
-            // Insert Profile ke Database
-            const { error: profileError } = await supabase
-                .from('teachers')
-                .insert({
-                    id: user.id,
-                    name: name,
-                    email: email,
-                    school: school,
-                    role: role,
-                    homeroom_classes: homeroomClasses,
-                    subjects: subjects,
-                    teaching_classes: teachingClasses,
-                    whatsapp: whatsapp,
-                    nuptk: nuptk,
-                    profile_photo_url: photoUrl
-                });
-
-            if (profileError) throw profileError;
-
-            // Auto Login
-            if (!authData.session) {
-                const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
-                if (loginError) throw loginError;
-            }
-
-            showAlert('success', 'Akun berhasil dibuat! Selamat datang ✨');
-
-        } catch (err) {
-            console.error('Signup Error:', err);
-            showAlert('error', err.message || 'Terjadi kesalahan saat pendaftaran.');
+            
+        } catch (error) {
+            showAlert('error', error.message || 'Terjadi kesalahan saat pendaftaran.');
         } finally {
-            signupBtn.disabled = false;
-            signupBtn.innerHTML = originalBtnHTML;
+            domElements.signupBtn.innerHTML = originalBtnHTML;
+            domElements.signupBtn.disabled = false;
         }
     }
-
-    // Fungsi Bantuan Tambahan
-    function addDynamicInput(containerId, placeholder, iconClass, example) {
-        const container = document.getElementById(containerId);
-        const rows = container.querySelectorAll('.dynamic-input-row');
-        const index = rows.length;
+    
+    async function handleForgotPassword(e) {
+        e.preventDefault();
         
-        const row = document.createElement('div');
-        row.className = 'dynamic-input-row';
-        row.innerHTML = `
-            <div class="input-wrapper dynamic-input">
-                <i class="fas ${iconClass} input-icon"></i>
-                <input type="text" class="form-input small" placeholder="${example}" data-index="${index}">
-            </div>
-            <button type="button" class="btn-remove remove-input">
-                <i class="fas fa-minus"></i>
-            </button>
-        `;
+        const email = document.getElementById('forgot-email').value.trim();
+        const resetBtn = document.getElementById('reset-btn');
         
-        container.appendChild(row);
+        if (!email) {
+            showAlert('error', 'Email harus diisi.');
+            return;
+        }
         
-        const removeBtn = row.querySelector('.remove-input');
-        removeBtn.addEventListener('click', () => {
-            if (rows.length > 1) {
-                row.remove();
+        const originalBtnHTML = resetBtn.innerHTML;
+        
+        try {
+            resetBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Mengirim...</span>';
+            resetBtn.disabled = true;
+            
+            const result = await authManager.handleForgotPassword(email);
+            
+            if (result.success) {
+                showAlert('success', `Tautan reset password telah dikirim ke ${email}. Silakan periksa email Anda.`);
+                domElements.forgotPasswordForm.reset();
             } else {
-                showAlert('warning', 'Minimal satu input harus diisi');
+                showAlert('error', result.error || 'Gagal mengirim email reset. Silakan coba lagi.');
             }
-        });
+            
+        } catch (error) {
+            showAlert('error', error.message || 'Terjadi kesalahan.');
+        } finally {
+            resetBtn.innerHTML = originalBtnHTML;
+            resetBtn.disabled = false;
+        }
     }
-
-    function collectInputValues(containerId) {
-        return Array.from(document.querySelectorAll(`#${containerId} input`))
-            .map(input => input.value.trim())
-            .filter(value => value !== '');
+    
+    async function handleLogout() {
+        const result = await authManager.handleLogout();
+        
+        if (result.success) {
+            showAuth();
+            showForm('login');
+            
+            // Reset forms
+            domElements.loginForm.reset();
+            resetSignupForm();
+            domElements.forgotPasswordForm.reset();
+            
+            // Clear state persistence
+            statePersistence.clear();
+            
+        } else {
+            showAlert('error', result.error || 'Gagal logout.');
+        }
     }
-
+    
+    // ============================================================================
+    // UI MANAGEMENT FUNCTIONS
+    // ============================================================================
+    
+    function showForm(formType) {
+        // Hide semua forms
+        domElements.loginForm.classList.add('hidden');
+        domElements.signupForm.classList.add('hidden');
+        domElements.forgotPasswordForm.classList.add('hidden');
+        
+        // Hide alerts
+        hideAllAlerts();
+        
+        switch (formType) {
+            case 'login':
+                domElements.loginForm.classList.remove('hidden');
+                domElements.authFormTitle.textContent = 'Masuk ke Akun Anda';
+                domElements.authFormSubtitle.textContent = 'Platform digital terpadu untuk guru madrasah';
+                break;
+                
+            case 'signup':
+                domElements.signupForm.classList.remove('hidden');
+                domElements.authFormTitle.textContent = 'Buat Akun Baru';
+                domElements.authFormSubtitle.textContent = 'Daftar sebagai guru madrasah terverifikasi';
+                break;
+                
+            case 'forgot':
+                domElements.forgotPasswordForm.classList.remove('hidden');
+                domElements.authFormTitle.textContent = 'Reset Password';
+                domElements.authFormSubtitle.textContent = 'Masukkan email untuk menerima link reset';
+                break;
+        }
+    }
+    
+    function resetSignupForm() {
+        // Reset state manager
+        stateManager.reset();
+        
+        // Reset DOM melalui sync manager
+        domSyncManager.resetSignupForm();
+        
+        // Reset step
+        goToStep(1);
+    }
+    
     function goToStep(step) {
         currentStep = step;
+        stateManager.update({ currentStep: step });
         
-        signupSteps.forEach(stepEl => {
+        // Update UI: Hide semua steps
+        domElements.signupSteps.forEach(stepEl => {
             stepEl.classList.remove('active');
             stepEl.classList.add('hidden');
         });
         
+        // Show current step
         const currentStepEl = document.querySelector(`.signup-step[data-step="${step}"]`);
-        currentStepEl.classList.remove('hidden');
-        currentStepEl.classList.add('active');
+        if (currentStepEl) {
+            currentStepEl.classList.remove('hidden');
+            currentStepEl.classList.add('active');
+        }
         
-        progressSteps.forEach(stepEl => {
+        // Update progress indicator
+        domElements.progressSteps.forEach(stepEl => {
             const stepNumber = parseInt(stepEl.dataset.step);
             stepEl.classList.remove('active', 'completed');
             
@@ -2471,380 +3510,81 @@
             else if (stepNumber === step) stepEl.classList.add('active');
         });
         
+        // Scroll ke atas
         document.querySelector('.auth-body').scrollTop = 0;
     }
-
-    function validateNuptk(nuptk) {
-        const errorElement = document.getElementById('signup-nuptk-error');
+    
+    function showDashboard() {
+        domElements.authContainer.style.display = 'none';
+        domElements.dashboardContainer.style.display = 'block';
         
-        if (!nuptk) {
-            errorElement.classList.add('hidden');
-            return true;
-        }
-        
-        const nuptkRegex = /^\d{16}$/;
-        if (!nuptkRegex.test(nuptk)) {
-            errorElement.classList.remove('hidden');
-            return false;
-        }
-        
-        errorElement.classList.add('hidden');
-        return true;
-    }
-
-    function isValidWhatsapp(whatsapp) {
-        if (!whatsapp) return true;
-        return /^(?:\+62|0)[0-9]{9,12}$/.test(whatsapp);
-    }
-
-    function validateWhatsappUI(whatsapp) {
-        const errorElement = document.getElementById('whatsapp-error');
-        
-        if (isValidWhatsapp(whatsapp)) {
-            errorElement.classList.add('hidden');
-            return true;
-        }
-
-        errorElement.classList.remove('hidden');
-        return false;
-    }
-
-    function validateEmail(email) {
-        const errorElement = document.getElementById('signup-email-error');
-        
-        if (!isValidEmail(email)) {
-            showValidationError('signup-email-error', 'Format email tidak valid');
-            return false;
-        }
-        
-        const institutionalDomains = ['gmail.com', 'madrasah.sch.id', 'kemenag.go.id', 'sekolahislam.id'];
-        const domain = email.split('@')[1];
-        
-        if (domain && !institutionalDomains.some(d => domain.endsWith(d))) {
-            showValidationError('signup-email-error', 'Disarankan menggunakan email institusi');
-            return false;
-        }
-        
-        errorElement.classList.add('hidden');
-        return true;
-    }
-
-    function checkPasswordStrength(password, strengthElement) {
-        let strength = 0;
-        
-        if (password.length >= 8) strength++;
-        if (/[A-Z]/.test(password)) strength++;
-        if (/[a-z]/.test(password)) strength++;
-        if (/[0-9]/.test(password)) strength++;
-        if (/[^A-Za-z0-9]/.test(password)) strength++;
-        
-        strengthElement.className = 'password-strength';
-        
-        if (password.length === 0) return;
-        else if (strength <= 2) strengthElement.classList.add('weak');
-        else if (strength <= 4) strengthElement.classList.add('medium');
-        else strengthElement.classList.add('strong');
-    }
-
-    function validateConfirmPassword() {
-        const password = document.getElementById('signup-password').value;
-        const confirmPassword = document.getElementById('signup-confirm-password').value;
-        const errorElement = document.getElementById('signup-confirm-error');
-        
-        if (!confirmPassword) {
-            errorElement.classList.add('hidden');
-            return false;
-        }
-        
-        if (password !== confirmPassword) {
-            showValidationError('signup-confirm-error', 'Password tidak cocok');
-            return false;
-        }
-        
-        errorElement.classList.add('hidden');
-        return true;
-    }
-
-    function validateAndPreviewPhoto(file) {
-        const errorElement = document.getElementById('photo-error');
-        
-        const validTypes = ['image/jpeg', 'image/png'];
-        if (!validTypes.includes(file.type)) {
-            showValidationError('photo-error', 'Format file harus JPG atau PNG');
-            return false;
-        }
-        
-        const maxSize = 2 * 1024 * 1024;
-        if (file.size > maxSize) {
-            showValidationError('photo-error', 'Ukuran file maksimal 2 MB');
-            return false;
-        }
-        
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            photoPreview.innerHTML = `<img src="${e.target.result}" alt="Preview Foto">`;
-            photoFile = file;
-            photoUrl = e.target.result;
-        };
-        reader.readAsDataURL(file);
-        
-        errorElement.classList.add('hidden');
-        return true;
-    }
-
-    async function openCamera() {
-        try {
-            stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { 
-                    facingMode: 'user',
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 }
-                } 
-            });
-            
-            cameraPreview.srcObject = stream;
-            cameraContainer.style.display = 'flex';
-            document.body.style.overflow = 'hidden';
-        } catch (error) {
-            console.error('Error accessing camera:', error);
-            showAlert('error', 'Tidak dapat mengakses kamera. Pastikan Anda memberikan izin.');
+        if (window.innerWidth <= 1024) {
+            domElements.dashboardSidebar.classList.remove('active');
         }
     }
-
-    function closeCamera() {
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-            stream = null;
+    
+    function showAuth() {
+        domElements.authContainer.style.display = 'flex';
+        domElements.dashboardContainer.style.display = 'none';
+        showForm('login');
+    }
+    
+    function updateDashboardUI(teacherData) {
+        if (!teacherData) return;
+        
+        const userName = teacherData.name || 'Guru Madrasah';
+        const userEmail = teacherData.email || 'email@madrasah.sch.id';
+        const userRole = getRoleDisplayName(teacherData.role);
+        const school = teacherData.school || 'Sekolah Madrasah';
+        const nuptk = teacherData.nuptk ? `NUPTK: ${teacherData.nuptk}` : 'NUPTK: -';
+        
+        const initials = userName.split(' ').map(n => n[0]).join('').toUpperCase();
+        
+        // Update dashboard elements
+        domElements.dashboardUsername.textContent = userName;
+        domElements.dashboardRole.textContent = userRole;
+        domElements.dashboardFullname.textContent = userName;
+        domElements.dashboardEmail.textContent = userEmail;
+        domElements.dashboardSchool.textContent = school;
+        domElements.dashboardNuptk.textContent = nuptk;
+        domElements.dashboardTeacherRole.textContent = userRole;
+        domElements.welcomeUsername.textContent = userName.split(' ')[0];
+        
+        // Update avatar
+        if (teacherData.profile_photo_url) {
+            domElements.userAvatar.innerHTML = `<img src="${teacherData.profile_photo_url}" alt="${userName}">`;
+            domElements.dashboardAvatarLarge.innerHTML = `<img src="${teacherData.profile_photo_url}" alt="${userName}">`;
+        } else {
+            domElements.userAvatar.innerHTML = initials || '<i class="fas fa-user"></i>';
+            domElements.dashboardAvatarLarge.innerHTML = initials || '<i class="fas fa-user"></i>';
         }
         
-        cameraContainer.style.display = 'none';
-        document.body.style.overflow = 'auto';
-    }
-
-    function capturePhoto() {
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
+        // Update classes info
+        updateDashboardClassesInfo(teacherData);
         
-        canvas.width = cameraPreview.videoWidth;
-        canvas.height = cameraPreview.videoHeight;
-        
-        context.drawImage(cameraPreview, 0, 0, canvas.width, canvas.height);
-        
-        canvas.toBlob((blob) => {
-            const file = new File([blob], 'selfie.jpg', { type: 'image/jpeg' });
-            validateAndPreviewPhoto(file);
-            closeCamera();
-        }, 'image/jpeg', 0.9);
+        // Save to localStorage
+        localStorage.setItem('smartMudarrisUser', JSON.stringify({
+            name: userName,
+            email: userEmail,
+            role: userRole,
+            school: school,
+            nuptk: teacherData.nuptk,
+            profilePhoto: teacherData.profile_photo_url
+        }));
     }
-
-    // Fungsi Auth Lainnya
-    function setupAuthForms() {
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            await handleLogin();
-        });
-
-        signupForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            await handleSignup();
-        });
-
-        forgotPasswordForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            await handleForgotPassword();
-        });
-
-        setupPasswordToggles();
-    }
-
-    function setupPasswordToggles() {
-        const toggles = [
-            { inputId: 'login-password', toggleId: 'toggle-login-password' },
-            { inputId: 'signup-password', toggleId: 'toggle-signup-password' },
-            { inputId: 'signup-confirm-password', toggleId: 'toggle-signup-confirm-password' }
-        ];
-
-        toggles.forEach(({ inputId, toggleId }) => {
-            const input = document.getElementById(inputId);
-            const toggle = document.getElementById(toggleId);
-            
-            if (toggle) {
-                toggle.addEventListener('click', () => {
-                    const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
-                    input.setAttribute('type', type);
-                    toggle.innerHTML = type === 'password' ? '<i class="fas fa-eye"></i>' : '<i class="fas fa-eye-slash"></i>';
-                });
-            }
-        });
-    }
-
-    async function handleLogin() {
-        const email = document.getElementById('login-email').value.trim();
-        const password = document.getElementById('login-password').value;
-        const loginBtn = document.getElementById('login-btn');
-
-        if (!email || !password) {
-            showAlert('error', 'Email dan password harus diisi.');
-            return;
-        }
-
-        loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Memproses...</span>';
-        loginBtn.disabled = true;
-
-        try {
-            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-            if (error) throw error;
-
-            currentUser = data.user;
-            await loadUserProfile();
-            showDashboard();
-            loginForm.reset();
-            
-        } catch (error) {
-            showAlert('error', error.message || 'Login gagal. Periksa email dan password Anda.');
-        } finally {
-            loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i><span>Masuk ke Dashboard</span>';
-            loginBtn.disabled = false;
-        }
-    }
-
-    async function handleForgotPassword() {
-        const email = document.getElementById('forgot-email').value.trim();
-        const resetBtn = document.getElementById('reset-btn');
-
-        if (!email) {
-            showAlert('error', 'Email harus diisi.');
-            return;
-        }
-
-        resetBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Mengirim...</span>';
-        resetBtn.disabled = true;
-
-        try {
-            const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: `${window.location.origin}/reset-password.html`,
-            });
-
-            if (error) throw error;
-
-            showAlert('success', `Tautan reset password telah dikirim ke ${email}. Silakan periksa email Anda.`);
-            forgotPasswordForm.reset();
-
-        } catch (error) {
-            showAlert('error', error.message || 'Gagal mengirim email reset. Silakan coba lagi.');
-        } finally {
-            resetBtn.innerHTML = '<i class="fas fa-paper-plane"></i><span>Kirim Link Reset</span>';
-            resetBtn.disabled = false;
-        }
-    }
-
-    async function handleLogout() {
-        try {
-            const { error } = await supabase.auth.signOut();
-            if (error) throw error;
-
-            currentUser = null;
-            currentTeacher = null;
-            
-            showAuth();
-            showForm('login');
-            
-            loginForm.reset();
-            resetSignupForm();
-            forgotPasswordForm.reset();
-
-        } catch (error) {
-            console.error('Logout error:', error);
-        }
-    }
-
-    // Fungsi Profile & Dashboard
-    async function loadUserProfile() {
-        if (!currentUser) return;
-
-        try {
-            const { data: teacherData, error } = await supabase
-                .from('teachers')
-                .select('*')
-                .eq('id', currentUser.id)
-                .single();
-
-            if (error) throw error;
-
-            currentTeacher = teacherData;
-            
-            const userName = teacherData.full_name || 'Guru Madrasah';
-            const userEmail = teacherData.email || 'email@madrasah.sch.id';
-            const userRole = getRoleDisplayName(teacherData.role);
-            const school = teacherData.school || 'Sekolah Madrasah';
-            const nuptk = teacherData.nuptk ? `NUPTK: ${teacherData.nuptk}` : 'NUPTK: -';
-            
-            const initials = userName.split(' ').map(n => n[0]).join('').toUpperCase();
-            
-            dashboardUsername.textContent = userName;
-            dashboardRole.textContent = userRole;
-            dashboardFullname.textContent = userName;
-            dashboardEmail.textContent = userEmail;
-            dashboardSchool.textContent = school;
-            dashboardNuptk.textContent = nuptk;
-            dashboardTeacherRole.textContent = userRole;
-            welcomeUsername.textContent = userName.split(' ')[0];
-            
-            if (teacherData.profile_photo_url) {
-                userAvatar.innerHTML = `<img src="${teacherData.profile_photo_url}" alt="${userName}">`;
-                dashboardAvatarLarge.innerHTML = `<img src="${teacherData.profile_photo_url}" alt="${userName}">`;
-            } else {
-                userAvatar.innerHTML = initials || '<i class="fas fa-user"></i>';
-                dashboardAvatarLarge.innerHTML = initials || '<i class="fas fa-user"></i>';
-            }
-            
-            updateClassesInfo(teacherData);
-            
-            if (teacherData.preferences && teacherData.preferences.theme) {
-                applyTheme(teacherData.preferences.theme);
-            }
-            
-            localStorage.setItem('smartMudarrisUser', JSON.stringify({
-                name: userName,
-                email: userEmail,
-                role: userRole,
-                school: school,
-                nuptk: teacherData.nuptk,
-                profilePhoto: teacherData.profile_photo_url
-            }));
-            
-        } catch (error) {
-            console.error('Error loading teacher profile:', error);
-            
-            const userName = currentUser.user_metadata?.full_name || 'Guru Madrasah';
-            const userEmail = currentUser.email || 'email@madrasah.sch.id';
-            const initials = userName.split(' ').map(n => n[0]).join('').toUpperCase();
-            
-            dashboardUsername.textContent = userName;
-            dashboardRole.textContent = 'Pengajar';
-            dashboardFullname.textContent = userName;
-            dashboardEmail.textContent = userEmail;
-            dashboardSchool.textContent = 'Sekolah Madrasah';
-            dashboardNuptk.textContent = 'NUPTK: -';
-            dashboardTeacherRole.textContent = 'Guru';
-            welcomeUsername.textContent = userName.split(' ')[0];
-            userAvatar.innerHTML = initials || '<i class="fas fa-user"></i>';
-            dashboardAvatarLarge.innerHTML = initials || '<i class="fas fa-user"></i>';
-        }
-    }
-
-    function updateClassesInfo(teacherData) {
-        const classesInfo = document.getElementById('dashboard-classes-info');
+    
+    function updateDashboardClassesInfo(teacherData) {
+        const classesInfo = domElements.dashboardClassesInfo;
         classesInfo.innerHTML = '';
         
-        if (teacherData.role === 'kelas' && teacherData.homeroom_classes && teacherData.homeroom_classes.length > 0) {
+        if (teacherData.role === 'kelas' && teacherData.homeroom_classes) {
             const classes = teacherData.homeroom_classes.join(', ');
             const item = document.createElement('div');
             item.className = 'meta-item';
             item.innerHTML = `<i class="fas fa-chalkboard-teacher"></i><span>Kelas: ${classes}</span>`;
             classesInfo.appendChild(item);
         } else if (teacherData.role === 'mapel') {
-            if (teacherData.subjects && teacherData.subjects.length > 0) {
+            if (teacherData.subjects) {
                 const subjects = teacherData.subjects.join(', ');
                 const item = document.createElement('div');
                 item.className = 'meta-item';
@@ -2852,7 +3592,7 @@
                 classesInfo.appendChild(item);
             }
             
-            if (teacherData.teaching_classes && teacherData.teaching_classes.length > 0) {
+            if (teacherData.teaching_classes) {
                 const classes = teacherData.teaching_classes.join(', ');
                 const item = document.createElement('div');
                 item.className = 'meta-item';
@@ -2861,7 +3601,7 @@
             }
         }
     }
-
+    
     function getRoleDisplayName(role) {
         const roleNames = {
             'umum': 'Guru Umum',
@@ -2870,168 +3610,109 @@
         };
         return roleNames[role] || 'Guru';
     }
-
-    function applyTheme(theme) {
-        localStorage.setItem('smartMudarrisTheme', theme);
-    }
-
-    // Fungsi UI & Helper
-    function showForm(formType) {
-        loginForm.classList.add('hidden');
-        signupForm.classList.add('hidden');
-        forgotPasswordForm.classList.add('hidden');
-        hideAllAlerts();
-
-        switch (formType) {
-            case 'login':
-                loginForm.classList.remove('hidden');
-                authFormTitle.textContent = 'Masuk ke Akun Anda';
-                authFormSubtitle.textContent = 'Platform digital terpadu untuk guru madrasah';
-                break;
-            case 'signup':
-                signupForm.classList.remove('hidden');
-                authFormTitle.textContent = 'Buat Akun Baru';
-                authFormSubtitle.textContent = 'Daftar sebagai guru madrasah terverifikasi';
-                break;
-            case 'forgot':
-                forgotPasswordForm.classList.remove('hidden');
-                authFormTitle.textContent = 'Reset Password';
-                authFormSubtitle.textContent = 'Masukkan email untuk menerima link reset';
-                break;
-        }
-    }
-
-    function resetSignupForm() {
-        signupForm.reset();
-        signupState.role = null;
-        photoFile = null;
-        photoUrl = null;
-        photoPreview.innerHTML = `
-            <div class="photo-placeholder">
-                <i class="fas fa-user-circle"></i>
-                <span>Belum ada foto</span>
-            </div>
-        `;
-        resetDynamicInputs();
-        goToStep(1);
-        hideValidationMessages();
-        document.getElementById('password-strength').className = 'password-strength';
-    }
-
-    function resetDynamicInputs() {
-        const kelasInputs = document.getElementById('kelas-inputs');
-        kelasInputs.innerHTML = `
-            <div class="dynamic-input-row">
-                <div class="input-wrapper dynamic-input">
-                    <i class="fas fa-chalkboard-teacher input-icon"></i>
-                    <input type="text" class="form-input small" placeholder="Contoh: Kelas 1A" data-index="0">
-                </div>
-                <button type="button" class="btn-add" id="add-kelas">
-                    <i class="fas fa-plus"></i>
-                </button>
-            </div>
-        `;
-        
-        const mapelInputs = document.getElementById('mapel-inputs');
-        mapelInputs.innerHTML = `
-            <div class="dynamic-input-row">
-                <div class="input-wrapper dynamic-input">
-                    <i class="fas fa-book input-icon"></i>
-                    <input type="text" class="form-input small" placeholder="Contoh: Matematika" data-index="0">
-                </div>
-                <button type="button" class="btn-add" id="add-mapel">
-                    <i class="fas fa-plus"></i>
-                </button>
-            </div>
-        `;
-        
-        const mapelKelasInputs = document.getElementById('mapel-kelas-inputs');
-        mapelKelasInputs.innerHTML = `
-            <div class="dynamic-input-row">
-                <div class="input-wrapper dynamic-input">
-                    <i class="fas fa-chalkboard input-icon"></i>
-                    <input type="text" class="form-input small" placeholder="Contoh: 1A" data-index="0">
-                </div>
-                <button type="button" class="btn-add" id="add-mapel-kelas">
-                    <i class="fas fa-plus"></i>
-                </button>
-            </div>
-        `;
-        
-        setupDynamicInputs();
-    }
-
-    function showDashboard() {
-        authContainer.style.display = 'none';
-        dashboardContainer.style.display = 'block';
-        
-        if (window.innerWidth <= 1024) dashboardSidebar.classList.remove('active');
-    }
-
-    function showAuth() {
-        authContainer.style.display = 'flex';
-        dashboardContainer.style.display = 'none';
-        showForm('login');
-    }
-
+    
+    // ============================================================================
+    // ALERT & UTILITY FUNCTIONS
+    // ============================================================================
+    
     function showAlert(type, message) {
         hideAllAlerts();
-
+        
         switch (type) {
             case 'error':
-                alertErrorMessage.textContent = message;
-                alertError.classList.remove('hidden');
+                domElements.alertErrorMessage.textContent = message;
+                domElements.alertError.classList.remove('hidden');
                 break;
             case 'success':
-                alertSuccessMessage.textContent = message;
-                alertSuccess.classList.remove('hidden');
+                domElements.alertSuccessMessage.textContent = message;
+                domElements.alertSuccess.classList.remove('hidden');
+                break;
+            case 'warning':
+                // Create warning alert jika belum ada
+                let warningAlert = document.getElementById('alert-warning');
+                if (!warningAlert) {
+                    warningAlert = document.createElement('div');
+                    warningAlert.id = 'alert-warning';
+                    warningAlert.className = 'alert alert-warning hidden';
+                    warningAlert.innerHTML = `
+                        <i class="fas fa-exclamation-triangle alert-icon"></i>
+                        <div class="alert-content">
+                            <div class="alert-title">Peringatan</div>
+                            <div class="alert-message"></div>
+                        </div>
+                    `;
+                    domElements.alertError.parentNode.insertBefore(warningAlert, domElements.alertError);
+                }
+                warningAlert.querySelector('.alert-message').textContent = message;
+                warningAlert.classList.remove('hidden');
                 break;
         }
-
-        setTimeout(() => hideAllAlerts(), 5000);
-    }
-
-    function hideAllAlerts() {
-        alertError.classList.add('hidden');
-        alertSuccess.classList.add('hidden');
-    }
-
-    function hideValidationMessages() {
-        const validationMessages = document.querySelectorAll('.validation-message');
-        validationMessages.forEach(msg => msg.classList.add('hidden'));
-    }
-
-    function showValidationError(elementId, message) {
-        const element = document.getElementById(elementId);
-        if (element) {
-            element.textContent = message;
-            element.classList.remove('hidden');
-        }
-    }
-
-    function isValidEmail(email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
+        
+        // Auto-hide setelah 5 detik
+        setTimeout(hideAllAlerts, 5000);
     }
     
-    // Inisialisasi & Auth State
-    document.addEventListener('DOMContentLoaded', () => initApp());
-
+    function hideAllAlerts() {
+        domElements.alertError.classList.add('hidden');
+        domElements.alertSuccess.classList.add('hidden');
+        
+        const warningAlert = document.getElementById('alert-warning');
+        if (warningAlert) warningAlert.classList.add('hidden');
+    }
+    
+    // ============================================================================
+    // AUTH STATE LISTENER (Supabase)
+    // ============================================================================
+    
     supabase.auth.onAuthStateChange(async (event, session) => {
-        if (event === 'SIGNED_IN' && session && !authInitialized) {
-            authInitialized = true;
-            currentUser = session.user;
-            await loadUserProfile();
-            showDashboard();
+        if (event === 'SIGNED_IN' && session) {
+            authManager.authInitialized = true;
+            authManager.currentUser = session.user;
+            
+            const profileResult = await authManager.loadUserProfile();
+            if (profileResult.success) {
+                updateDashboardUI(authManager.getCurrentTeacher());
+                showDashboard();
+            }
         }
-
+        
         if (event === 'SIGNED_OUT') {
-            authInitialized = false;
-            currentUser = null;
-            currentTeacher = null;
+            authManager.authInitialized = false;
+            authManager.currentUser = null;
+            authManager.currentTeacher = null;
+            
             showAuth();
+            resetSignupForm();
         }
     });
+    
+    // ============================================================================
+    // CLEANUP ON UNLOAD
+    // ============================================================================
+    
+    window.addEventListener('beforeunload', () => {
+        // Cleanup event listeners
+        if (domSyncManager.eventManager) {
+            domSyncManager.eventManager.removeAll();
+        }
+        
+        // Close camera jika terbuka
+        if (cameraManager) {
+            cameraManager.closeCamera();
+        }
+        
+        // Save state terakhir
+        statePersistence.save();
+    });
+    
+    // ============================================================================
+    // INITIALIZE APPLICATION
+    // ============================================================================
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        initApp();
+    });
 </script>
+  
 </body>
 </html>
