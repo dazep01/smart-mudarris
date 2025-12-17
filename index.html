@@ -1306,6 +1306,80 @@
         .w-100 {
             width: 100%;
         }
+      
+/* Modal Styles */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.modal.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-content {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    width: 90%;
+    max-width: 500px;
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    text-align: center;
+    color: white;
+    animation: modalSlideIn 0.5s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-icon {
+    margin-bottom: 1.5rem;
+    color: #fff;
+}
+
+.modal-title {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+
+.modal-text {
+    margin-bottom: 2rem;
+    font-size: 1rem;
+    line-height: 1.5;
+    opacity: 0.9;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.modal-actions .btn {
+    min-width: 120px;
+}
     </style>
 </head>
 <body>
@@ -1898,15 +1972,36 @@
         </div>
     </div>
 
-    <!-- Supabase Integration -->
+<!-- Modal Konfirmasi Email -->
+<div id="email-confirmation-modal" class="modal hidden">
+    <div class="modal-content">
+        <div class="modal-icon">
+            <i class="fas fa-envelope fa-4x"></i>
+        </div>
+        <h2 class="modal-title">Akun dalam Proses Pembuatan</h2>
+        <p class="modal-text">
+            Silakan cek email Anda secara berkala untuk konfirmasi!
+        </p>
+        <div class="modal-actions">
+            <button id="close-modal-btn" class="btn btn-secondary">Tutup</button>
+            <button id="resend-email-btn" class="btn btn-primary">
+                <i class="fas fa-redo"></i> Minta Email Konfirmasi Ulang
+            </button>
+        </div>
+    </div>
+</div>
+  
+<!-- Supabase Integration -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script>
+        // Isolasi scope dengan IIFE (Langkah 4)
+        (() => {
         // Konfigurasi Supabase - GANTI DENGAN KONFIGURASI ANDA
         const SUPABASE_URL = 'https://mchemidupcgoqwmzpzwj.supabase.co'; // Ganti dengan URL Supabase Anda
         const SUPABASE_ANON_KEY = 'sb_publishable_hjn7xY3KwMfpTtfT8Q6ttQ_j196A29n'; // Ganti dengan anon key Anda
 
-        // Inisialisasi Supabase
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // Inisialisasi Supabase (Langkah 1 - rename client)
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         // Status pendaftaran (true untuk aktif)
         const SIGNUP_ENABLED = true;
@@ -1989,6 +2084,11 @@
         const authFormTitle = document.getElementById('auth-form-title');
         const authFormSubtitle = document.getElementById('auth-form-subtitle');
 
+		// Modal elements
+		const emailConfirmationModal = document.getElementById('email confirmation-modal');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        const resendEmailBtn = document.getElementById('resend-email-btn');
+          
         // Inisialisasi aplikasi
         async function initApp() {
             // Hide loading screen setelah 1.5 detik
@@ -2000,7 +2100,7 @@
             }, 1500);
 
             // Cek session user dari Supabase
-            const { data: { session } } = await supabase.auth.getSession();
+            const { data: { session } } = await supabaseClient.auth.getSession();
             
             if (session) {
                 currentUser = session.user;
@@ -2028,74 +2128,78 @@
         }
 
         // Setup event listeners
-        function setupEventListeners() {
-            // Sidebar toggle untuk mobile
-            sidebarToggle.addEventListener('click', () => {
-                dashboardSidebar.classList.toggle('active');
-            });
+function setupEventListeners() {
+    // Sidebar toggle untuk mobile
+    sidebarToggle.addEventListener('click', () => {
+        dashboardSidebar.classList.toggle('active');
+    });
 
-            // Navigation links
-            showSignupFormBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                if (!SIGNUP_ENABLED) {
-                    showAlert('error', 'Pendaftaran saat ini hanya untuk pengguna internal. Hubungi admin untuk akses.');
-                    return;
-                }
-                showForm('signup');
-                resetSignupForm();
-            });
-
-            showLoginFormBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                showForm('login');
-            });
-
-            showLoginFormFromForgotBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                showForm('login');
-            });
-
-            forgotPasswordLink.addEventListener('click', (e) => {
-                e.preventDefault();
-                showForm('forgot');
-            });
-
-            // Logout
-            logoutBtn.addEventListener('click', handleLogout);
-
-            // Step navigation
-            nextStep1Btn.addEventListener('click', validateStep1);
-            prevStep2Btn.addEventListener('click', () => goToStep(1));
-            nextStep2Btn.addEventListener('click', validateStep2);
-            prevStep3Btn.addEventListener('click', () => goToStep(2));
-            
-            // Theme toggle
-            themeOptions.forEach(option => {
-                option.addEventListener('click', () => {
-                    themeOptions.forEach(opt => opt.classList.remove('active'));
-                    option.classList.add('active');
-                });
-            });
-            
-            // WhatsApp notification toggle
-            const whatsappInput = document.getElementById('signup-whatsapp');
-            const whatsappNotifOption = document.getElementById('whatsapp-notif-option');
-            
-            whatsappInput.addEventListener('input', () => {
-                const whatsappValue = whatsappInput.value.trim();
-                if (whatsappValue) {
-                    whatsappNotifOption.style.display = 'flex';
-                } else {
-                    whatsappNotifOption.style.display = 'none';
-                    const whatsappCheckbox = whatsappNotifOption.querySelector('input');
-                    whatsappCheckbox.checked = false;
-                }
-            });
-            
-            // Real-time validation
-            setupRealTimeValidation();
+    // Navigation links
+    showSignupFormBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (!SIGNUP_ENABLED) {
+            showAlert('error', 'Pendaftaran saat ini hanya untuk pengguna internal. Hubungi admin untuk akses.');
+            return;
         }
+        showForm('signup');
+        resetSignupForm();
+    });
 
+    showLoginFormBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        showForm('login');
+    });
+
+    showLoginFormFromForgotBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        showForm('login');
+    });
+
+    forgotPasswordLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        showForm('forgot');
+    });
+
+    // Logout
+    logoutBtn.addEventListener('click', handleLogout);
+  
+    // Step navigation
+    nextStep1Btn.addEventListener('click', validateStep1);
+    prevStep2Btn.addEventListener('click', () => goToStep(1));
+    nextStep2Btn.addEventListener('click', validateStep2);
+    prevStep3Btn.addEventListener('click', () => goToStep(2));
+    
+    // Theme toggle
+    themeOptions.forEach(option => {
+        option.addEventListener('click', () => {
+            themeOptions.forEach(opt => opt.classList.remove('active'));
+            option.classList.add('active');
+        });
+    });
+    
+    // WhatsApp notification toggle
+    const whatsappInput = document.getElementById('signup-whatsapp');
+    const whatsappNotifOption = document.getElementById('whatsapp-notif-option');
+    
+    whatsappInput.addEventListener('input', () => {
+        const whatsappValue = whatsappInput.value.trim();
+        if (whatsappValue) {
+            whatsappNotifOption.style.display = 'flex';
+        } else {
+            whatsappNotifOption.style.display = 'none';
+            const whatsappCheckbox = whatsappNotifOption.querySelector('input');
+            whatsappCheckbox.checked = false;
+        }
+    });
+    
+    // Modal events
+    closeModalBtn.addEventListener('click', closeModal);
+    resendEmailBtn.addEventListener('click', handleResendConfirmationEmail);
+
+    // Real-time validation
+    setupRealTimeValidation();
+}
+          
         // Setup dynamic inputs
         function setupDynamicInputs() {
             // Add kelas input
@@ -2237,102 +2341,104 @@
         }
 
         // Validate step 1
-        function validateStep1() {
-            const name = document.getElementById('signup-name').value.trim();
-            const email = document.getElementById('signup-email').value.trim();
-            const password = document.getElementById('signup-password').value;
-            const confirmPassword = document.getElementById('signup-confirm-password').value;
-            
-            let isValid = true;
-            
-            // Reset errors
-            hideValidationMessages();
-            
-            // Validate name
-            if (!name) {
-                showValidationError('signup-name-error', 'Nama lengkap harus diisi');
-                isValid = false;
-            }
-            
-            // Validate email
-            if (!email) {
-                showValidationError('signup-email-error', 'Email institusi harus diisi');
-                isValid = false;
-            } else if (!isValidEmail(email)) {
-                showValidationError('signup-email-error', 'Format email tidak valid');
-                isValid = false;
-            }
-            
-            // Validate password
-            if (!password) {
-                showValidationError('signup-password-error', 'Password harus diisi');
-                isValid = false;
-            } else if (password.length < 8) {
-                showValidationError('signup-password-error', 'Password minimal 8 karakter');
-                isValid = false;
-            }
-            
-            // Validate confirm password
-            if (!confirmPassword) {
-                showValidationError('signup-confirm-error', 'Konfirmasi password harus diisi');
-                isValid = false;
-            } else if (password !== confirmPassword) {
-                showValidationError('signup-confirm-error', 'Password tidak cocok');
-                isValid = false;
-            }
-            
-            if (isValid) {
-                goToStep(2);
-            }
-        }
+function validateStep1() {
+    const name = document.getElementById('signup-name').value.trim();
+    const email = document.getElementById('signup-email').value.trim();
+    const password = document.getElementById('signup-password').value;
+    const confirmPassword = document.getElementById('signup-confirm-password').value;
+    
+    let isValid = true;
+    
+    hideValidationMessages();
+    
+    if (!name) {
+        showValidationError('signup-name-error', 'Nama lengkap harus diisi');
+        isValid = false;
+    }
+    
+    if (!email) {
+        showValidationError('signup-email-error', 'Email institusi harus diisi');
+        isValid = false;
+    } else if (!isValidEmail(email)) {
+        showValidationError('signup-email-error', 'Format email tidak valid');
+        isValid = false;
+    }
+    
+    if (!password) {
+        showValidationError('signup-password-error', 'Password harus diisi');
+        isValid = false;
+    } else if (password.length < 8) {
+        showValidationError('signup-password-error', 'Password minimal 8 karakter');
+        isValid = false;
+    }
+    
+    if (!confirmPassword) {
+        showValidationError('signup-confirm-error', 'Konfirmasi password harus diisi');
+        isValid = false;
+    } else if (password !== confirmPassword) {
+        showValidationError('signup-confirm-error', 'Password tidak cocok');
+        isValid = false;
+    }
+    
+    if (isValid) {
+        goToStep(2);
+    } else {
+        goToStep(1);
+    }
+    
+    return isValid;
+}
 
         // Validate step 2
-        function validateStep2() {
-            const school = document.getElementById('signup-school').value.trim();
-            const role = document.querySelector('input[name="teacher-role"]:checked').value;
-            
-            let isValid = true;
-            
-            // Reset errors
-            hideValidationMessages();
-            
-            // Validate school
-            if (!school) {
-                showValidationError('signup-school-error', 'Nama sekolah harus diisi');
-                isValid = false;
-            }
-            
-            // Validate conditional fields
-            if (role === 'kelas') {
-                const kelasInputs = document.querySelectorAll('#kelas-inputs input');
-                const kelasValues = Array.from(kelasInputs).map(input => input.value.trim()).filter(val => val);
-                
-                if (kelasValues.length === 0) {
-                    showValidationError('kelas-error', 'Minimal satu kelas harus diisi');
-                    isValid = false;
-                }
-            } else if (role === 'mapel') {
-                const mapelInputs = document.querySelectorAll('#mapel-inputs input');
-                const mapelValues = Array.from(mapelInputs).map(input => input.value.trim()).filter(val => val);
-                
-                const mapelKelasInputs = document.querySelectorAll('#mapel-kelas-inputs input');
-                const mapelKelasValues = Array.from(mapelKelasInputs).map(input => input.value.trim()).filter(val => val);
-                
-                if (mapelValues.length === 0) {
-                    showValidationError('mapel-error', 'Minimal satu mata pelajaran harus diisi');
-                    isValid = false;
-                }
-                
-                if (mapelKelasValues.length === 0) {
-                    showValidationError('mapel-kelas-error', 'Minimal satu kelas harus diisi');
-                    isValid = false;
-                }
-            }
-            
-            if (isValid) {
-                goToStep(3);
-            }
+function validateStep2() {
+    const school = document.getElementById('signup-school').value.trim();
+    const role = document.querySelector('input[name="teacher-role"]:checked').value;
+
+    let isValid = true;
+
+    hideValidationMessages();
+
+    if (!school) {
+        showValidationError('signup-school-error', 'Nama sekolah harus diisi');
+        isValid = false;
+    }
+
+    if (role === 'kelas') {
+        const kelasInputs = document.querySelectorAll('#kelas-inputs input');
+        const kelasValues = Array.from(kelasInputs).map(input => input.value.trim()).filter(val => val);
+
+        if (kelasValues.length === 0) {
+            showValidationError('kelas-error', 'Minimal satu kelas harus diisi');
+            isValid = false;
         }
+    } else if (role === 'mapel') {
+        const mapelInputs = document.querySelectorAll('#mapel-inputs input');
+        const mapelValues = Array.from(mapelInputs).map(input => input.value.trim()).filter(val => val);
+
+        const mapelKelasInputs = document.querySelectorAll('#mapel-kelas-inputs input');
+        const mapelKelasValues = Array.from(mapelKelasInputs).map(input => input.value.trim()).filter(val => val);
+
+        if (mapelValues.length === 0) {
+            showValidationError('mapel-error', 'Minimal satu mata pelajaran harus diisi');
+            isValid = false;
+        }
+
+        if (mapelKelasValues.length === 0) {
+            showValidationError('mapel-kelas-error', 'Minimal satu kelas harus diisi');
+            isValid = false;
+        }
+    }
+
+    if (!isValid) {
+        goToStep(2);
+    } else {
+        // Jika valid, lanjut ke step 3
+        goToStep(3);
+    }
+
+    return isValid;
+}
+
 
         // Go to specific step
         function goToStep(step) {
@@ -2341,9 +2447,16 @@
             
             // Hide all steps
             signupSteps.forEach(stepEl => {
-                stepEl.classList.remove('active');
-                stepEl.classList.add('hidden');
-            });
+        if (parseInt(stepEl.dataset.step) === step) {
+            stepEl.classList.remove('hidden');
+            stepEl.classList.add('active');
+            console.log(`Step ${step} shown:`, stepEl);
+        } else {
+            stepEl.classList.add('hidden');
+            stepEl.classList.remove('active');
+            console.log(`Step ${stepEl.dataset.step} hidden:`, stepEl);
+        }
+    });
             
             // Show current step
             const currentStepEl = document.querySelector(`.signup-step[data-step="${step}"]`);
@@ -2365,6 +2478,11 @@
             // Scroll to top of form
             document.querySelector('.auth-body').scrollTop = 0;
         }
+      
+window.goToStep = goToStep;
+window.showForm = showForm;
+window.resetSignupForm = resetSignupForm;
+
 
         // Validate NUPTK
         function validateNuptk(nuptk) {
@@ -2416,7 +2534,7 @@
             }
             
             // Optional: Check for institutional domain
-            const institutionalDomains = ['madrasah.sch.id', 'kemenag.go.id', 'sekolahislam.id'];
+            const institutionalDomains = ['gmail.com', 'madrasah.sch.id', 'kemenag.go.id', 'sekolahislam.id'];
             const domain = email.split('@')[1];
             
             if (domain && !institutionalDomains.some(d => domain.endsWith(d))) {
@@ -2613,8 +2731,8 @@
             loginBtn.disabled = true;
 
             try {
-                // Sign in dengan Supabase
-                const { data, error } = await supabase.auth.signInWithPassword({
+                // Sign in dengan Supabase (Langkah 2)
+                const { data, error } = await supabaseClient.auth.signInWithPassword({
                     email,
                     password
                 });
@@ -2639,176 +2757,198 @@
         }
 
         // Handle signup
-        async function handleSignup() {
-            if (!SIGNUP_ENABLED) {
-                showAlert('error', 'Pendaftaran saat ini hanya untuk pengguna internal. Hubungi admin untuk akses.');
-                return;
-            }
+async function handleSignup() {
+    if (!SIGNUP_ENABLED) {
+        showAlert('error', 'Pendaftaran saat ini hanya untuk pengguna internal. Hubungi admin untuk akses.');
+        return;
+    }
 
-            // Collect all data
-            const name = document.getElementById('signup-name').value.trim();
-            const email = document.getElementById('signup-email').value.trim();
-            const password = document.getElementById('signup-password').value;
-            const nuptk = document.getElementById('signup-nuptk').value.trim();
-            const school = document.getElementById('signup-school').value.trim();
-            const role = document.querySelector('input[name="teacher-role"]:checked').value;
-            const whatsapp = document.getElementById('signup-whatsapp').value.trim();
-            
-            // Get theme preference
-            const theme = document.querySelector('.theme-option.active').dataset.theme;
-            
-            // Get notification preferences
-            const notificationCheckboxes = document.querySelectorAll('input[name="notifications"]:checked');
-            const notifications = Array.from(notificationCheckboxes).map(cb => cb.value);
-            
-            // Get conditional data
-            let homeroomClasses = null;
-            let subjects = null;
-            let teachingClasses = null;
-            
-            if (role === 'kelas') {
-                const kelasInputs = document.querySelectorAll('#kelas-inputs input');
-                homeroomClasses = Array.from(kelasInputs).map(input => input.value.trim()).filter(val => val);
-            } else if (role === 'mapel') {
-                const mapelInputs = document.querySelectorAll('#mapel-inputs input');
-                subjects = Array.from(mapelInputs).map(input => input.value.trim()).filter(val => val);
-                
-                const mapelKelasInputs = document.querySelectorAll('#mapel-kelas-inputs input');
-                teachingClasses = Array.from(mapelKelasInputs).map(input => input.value.trim()).filter(val => val);
-            }
-            
-            // Validate all data
-            if (!validateSignupData()) {
-                return;
-            }
+    // Collect all data
+    const name = document.getElementById('signup-name').value.trim();
+    const email = document.getElementById('signup-email').value.trim();
+    const password = document.getElementById('signup-password').value;
+    const nuptk = document.getElementById('signup-nuptk').value.trim();
+    const school = document.getElementById('signup-school').value.trim();
+    const role = document.querySelector('input[name="teacher-role"]:checked').value;
+    const whatsapp = document.getElementById('signup-whatsapp').value.trim();
+    
+    // Get theme preference
+    const theme = document.querySelector('.theme-option.active').dataset.theme;
+    
+    // Get notification preferences
+    const notificationCheckboxes = document.querySelectorAll('input[name="notifications"]:checked');
+    const notifications = Array.from(notificationCheckboxes).map(cb => cb.value);
+    
+    // Get conditional data
+    let homeroomClasses = null;
+    let subjects = null;
+    let teachingClasses = null;
+    
+    if (role === 'kelas') {
+        const kelasInputs = document.querySelectorAll('#kelas-inputs input');
+        homeroomClasses = Array.from(kelasInputs).map(input => input.value.trim()).filter(val => val);
+    } else if (role === 'mapel') {
+        const mapelInputs = document.querySelectorAll('#mapel-inputs input');
+        subjects = Array.from(mapelInputs).map(input => input.value.trim()).filter(val => val);
+        
+        const mapelKelasInputs = document.querySelectorAll('#mapel-kelas-inputs input');
+        teachingClasses = Array.from(mapelKelasInputs).map(input => input.value.trim()).filter(val => val);
+    }
+    
+    // Validate all data
+    if (!validateSignupData()) {
+        return;
+    }
 
-            // Update button state
-            signupBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Membuat akun...</span>';
-            signupBtn.disabled = true;
+    // Update button state
+    signupBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Membuat akun...</span>';
+    signupBtn.disabled = true;
 
-            try {
-                // Step 1: Sign up dengan Supabase Auth
-                const { data: authData, error: authError } = await supabase.auth.signUp({
-                    email,
-                    password,
-                    options: {
-                        data: {
-                            full_name: name,
-                            role: 'teacher'
-                        }
-                    }
-                });
-
-                if (authError) throw authError;
-
-                const user = authData.user;
-                
-                // Step 2: Upload profile photo jika ada
-                let profilePhotoUrl = null;
-                if (photoFile) {
-                    const fileName = `${user.id}_profile.jpg`;
-                    const { error: uploadError } = await supabase.storage
-                        .from('profile-photos')
-                        .upload(fileName, photoFile, { upsert: true });
-                    
-                    if (!uploadError) {
-                        const { data: { publicUrl } } = supabase.storage
-                            .from('profile-photos')
-                            .getPublicUrl(fileName);
-                        profilePhotoUrl = publicUrl;
-                    }
-                }
-                
-                // Step 3: Simpan data ke tabel teachers
-                const { error: insertError } = await supabase.from('teachers').insert({
-                    id: user.id,
+    try {
+        // Step 1: Sign up dengan Supabase Auth (Langkah 2)
+        const { data: authData, error: authError } = await supabaseClient.auth.signUp({
+            email,
+            password,
+            options: {
+                data: {
                     full_name: name,
-                    email: email,
-                    nuptk: nuptk || null,
-                    school: school,
-                    role: role,
-                    homeroom_classes: homeroomClasses,
-                    subjects: subjects,
-                    teaching_classes: teachingClasses,
-                    whatsapp: whatsapp || null,
-                    profile_photo_url: profilePhotoUrl,
-                    preferences: {
-                        theme: theme,
-                        notifications: notifications
-                    }
-                });
-
-                if (insertError) throw insertError;
-
-                // Step 4: Auto login
-                const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
-                    email,
-                    password
-                });
-
-                if (loginError) throw loginError;
-
-                // Success
-                currentUser = loginData.user;
-                await loadUserProfile();
-                showDashboard();
-                
-                // Reset form
-                resetSignupForm();
-                
-                // Show success message
-                showAlert('success', 'Akun berhasil dibuat! Anda sekarang masuk ke dashboard.');
-                
-            } catch (error) {
-                console.error('Signup error:', error);
-                showAlert('error', error.message || 'Pendaftaran gagal. Silakan coba lagi.');
-            } finally {
-                // Reset button state
-                signupBtn.innerHTML = '<i class="fas fa-user-plus"></i><span>Buat Akun</span>';
-                signupBtn.disabled = false;
-            }
-        }
-
-        // Validate all signup data
-        function validateSignupData() {
-            let isValid = true;
-            
-            // Validate step 1 data
-            if (!validateStep1()) {
-                goToStep(1);
-                isValid = false;
-            }
-            
-            // Validate step 2 data
-            if (!validateStep2()) {
-                goToStep(2);
-                isValid = false;
-            }
-            
-            // Validate photo
-            if (photoFile) {
-                if (!validateAndPreviewPhoto(photoFile)) {
-                    isValid = false;
+                    role: 'teacher'
                 }
             }
+        });
+
+        if (authError) throw authError;
+
+        const user = authData.user;
+        
+        // Step 2: Upload profile photo jika ada (Langkah 2)
+        let profilePhotoUrl = null;
+        if (photoFile) {
+            const fileName = `${user.id}/profile.jpg`;
+            const { error: uploadError } = await supabaseClient.storage
+                .from('profile-photos')
+                .upload(fileName, photoFile, { 
+                    upsert: true,
+                    contentType: photoFile.type 
+                });
             
-            // Validate WhatsApp
-            const whatsapp = document.getElementById('signup-whatsapp').value.trim();
-            if (whatsapp && !validateWhatsapp(whatsapp)) {
-                goToStep(3);
-                isValid = false;
+            if (uploadError) {
+                console.error('Upload error:', uploadError);
+                // Jangan throw error, biarkan pendaftaran lanjut tanpa foto
+            } else {
+                const { data: { publicUrl } } = supabaseClient.storage
+                    .from('profile-photos')
+                    .getPublicUrl(fileName);
+                profilePhotoUrl = publicUrl;
             }
-            
-            // Validate NUPTK
-            const nuptk = document.getElementById('signup-nuptk').value.trim();
-            if (nuptk && !validateNuptk(nuptk)) {
-                goToStep(2);
-                isValid = false;
+        }
+        
+        // Step 3: Simpan data ke tabel teachers dengan logging (Langkah 2)
+        console.log('Attempting to insert teacher data:', {
+            id: user.id,
+            full_name: name,
+            email: email,
+            nuptk: nuptk || null,
+            school: school,
+            role: role,
+            homeroom_classes: homeroomClasses,
+            subjects: subjects,
+            teaching_classes: teachingClasses,
+            whatsapp: whatsapp || null,
+            profile_photo_url: profilePhotoUrl,
+            preferences: {
+                theme: theme,
+                notifications: notifications
             }
-            
-            return isValid;
+        });
+
+        const { data: insertedData, error: insertError } = await supabaseClient
+            .from('teachers')
+            .insert({
+                id: user.id,
+                full_name: name,
+                email: email,
+                nuptk: nuptk || null,
+                school: school,
+                role: role,
+                homeroom_classes: homeroomClasses,
+                subjects: subjects,
+                teaching_classes: teachingClasses,
+                whatsapp: whatsapp || null,
+                profile_photo_url: profilePhotoUrl,
+                preferences: {
+                    theme: theme,
+                    notifications: notifications
+                }
+            })
+            .select();
+
+        console.log('Insert result:', { insertedData, insertError });
+
+        if (insertError) {
+            console.error('Insert teacher error:', insertError);
+            throw insertError;
         }
 
+        // Success - Show confirmation modal instead of auto-login
+        showModal();
+
+        // Reset form
+        resetSignupForm();
+
+        // Show success message
+        showAlert('success', 'Akun berhasil dibuat! Silakan cek email Anda untuk konfirmasi.');
+
+    } catch (error) {
+        console.error('Signup error:', error);
+        
+        // Check if it's an email confirmation error
+        if (error.message && (error.message.includes('email confirmation') || error.message.includes('confirmation'))) {
+            showModal();
+            resetSignupForm();
+            showAlert('success', 'Akun berhasil dibuat! Silakan cek email Anda untuk konfirmasi.');
+        } else {
+            showAlert('error', error.message || 'Pendaftaran gagal. Silakan coba lagi.');
+        }
+    } finally {
+        // Reset button state
+        signupBtn.innerHTML = '<i class="fas fa-user-plus"></i><span>Buat Akun</span>';
+        signupBtn.disabled = false;
+    }
+}
+        // Validate all signup data
+function validateSignupData() {
+    let isValid = true;
+    
+    // Validate step 1 data (wajib)
+    if (!validateStep1()) {
+        goToStep(1);
+        isValid = false;
+    }
+    
+    // Validate step 2 data (wajib)
+    if (!validateStep2()) {
+        goToStep(2);
+        isValid = false;
+    }
+    
+    // Validate WhatsApp (opsional, tapi jika diisi harus valid)
+    const whatsapp = document.getElementById('signup-whatsapp').value.trim();
+    if (whatsapp && !validateWhatsapp(whatsapp)) {
+        goToStep(3);
+        isValid = false;
+    }
+    
+    // Validate NUPTK (opsional, tapi jika diisi harus valid)
+    const nuptk = document.getElementById('signup-nuptk').value.trim();
+    if (nuptk && !validateNuptk(nuptk)) {
+        goToStep(2);
+        isValid = false;
+    }
+    
+    return isValid;
+}
+      
         // Handle forgot password
         async function handleForgotPassword() {
             const email = document.getElementById('forgot-email').value.trim();
@@ -2824,8 +2964,8 @@
             resetBtn.disabled = true;
 
             try {
-                // Reset password dengan Supabase
-                const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                // Reset password dengan Supabase (Langkah 2)
+                const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
                     redirectTo: `${window.location.origin}/reset-password.html`,
                 });
 
@@ -2849,8 +2989,8 @@
         // Handle logout
         async function handleLogout() {
             try {
-                // Sign out dari Supabase
-                const { error } = await supabase.auth.signOut();
+                // Sign out dari Supabase (Langkah 2)
+                const { error } = await supabaseClient.auth.signOut();
                 
                 if (error) throw error;
 
@@ -2877,8 +3017,8 @@
             if (!currentUser) return;
 
             try {
-                // Get teacher data from database
-                const { data: teacherData, error } = await supabase
+                // Get teacher data from database (Langkah 2)
+                const { data: teacherData, error } = await supabaseClient
                     .from('teachers')
                     .select('*')
                     .eq('id', currentUser.id)
@@ -3003,33 +3143,41 @@
             localStorage.setItem('smartMudarrisTheme', theme);
         }
 
-        // Show specific form
-        function showForm(formType) {
-            // Hide all forms and alerts
-            loginForm.classList.add('hidden');
-            signupForm.classList.add('hidden');
-            forgotPasswordForm.classList.add('hidden');
-            hideAllAlerts();
+        // Show specific form    
+function showForm(formType) {
+    // Sembunyikan semua form dan reset style display
+    loginForm.classList.add('hidden');
+    loginForm.style.display = 'none';
+    signupForm.classList.add('hidden');
+    signupForm.style.display = 'none';
+    forgotPasswordForm.classList.add('hidden');
+    forgotPasswordForm.style.display = 'none';
 
-            // Show selected form
-            switch (formType) {
-                case 'login':
-                    loginForm.classList.remove('hidden');
-                    authFormTitle.textContent = 'Masuk ke Akun Anda';
-                    authFormSubtitle.textContent = 'Platform digital terpadu untuk guru madrasah';
-                    break;
-                case 'signup':
-                    signupForm.classList.remove('hidden');
-                    authFormTitle.textContent = 'Buat Akun Baru';
-                    authFormSubtitle.textContent = 'Daftar sebagai guru madrasah terverifikasi';
-                    break;
-                case 'forgot':
-                    forgotPasswordForm.classList.remove('hidden');
-                    authFormTitle.textContent = 'Reset Password';
-                    authFormSubtitle.textContent = 'Masukkan email untuk menerima link reset';
-                    break;
-            }
-        }
+    hideAllAlerts();
+
+    switch (formType) {
+        case 'login':
+            loginForm.classList.remove('hidden');
+            loginForm.style.display = 'block';
+            authFormTitle.textContent = 'Masuk ke Akun Anda';
+            authFormSubtitle.textContent = 'Platform digital terpadu untuk guru madrasah';
+            break;
+        case 'signup':
+            signupForm.classList.remove('hidden');
+            signupForm.style.display = 'block';
+            authFormTitle.textContent = 'Buat Akun Baru';
+            authFormSubtitle.textContent = 'Daftar sebagai guru madrasah terverifikasi';
+            goToStep(1);
+            break;
+        case 'forgot':
+            forgotPasswordForm.classList.remove('hidden');
+            forgotPasswordForm.style.display = 'block';
+            authFormTitle.textContent = 'Reset Password';
+            authFormSubtitle.textContent = 'Masukkan email untuk menerima link reset';
+            break;
+    }
+}
+
 
         // Reset signup form
         function resetSignupForm() {
@@ -3058,7 +3206,7 @@
             // Reset password strength
             document.getElementById('password-strength').className = 'password-strength';
         }
-
+      
         // Reset dynamic inputs
         function resetDynamicInputs() {
             // Reset kelas inputs
@@ -3121,12 +3269,86 @@
         }
 
         // Show auth page
-        function showAuth() {
-            authContainer.style.display = 'flex';
-            dashboardContainer.style.display = 'none';
-            showForm('login');
-        }
+function showAuth() {
+    // Tampilkan container auth dan sembunyikan dashboard
+    authContainer.style.display = 'flex';
+    dashboardContainer.style.display = 'none';
 
+    // Hilangkan semua kelas hidden di container auth
+    authContainer.classList.remove('hidden');
+    dashboardContainer.classList.add('hidden');
+
+    // Form login muncul, signup dan forgot hilang, paksa pakai style langsung
+    loginForm.classList.remove('hidden');
+    loginForm.style.display = 'block';              // paksa tampil
+    signupForm.classList.add('hidden');
+    signupForm.style.display = 'none';               // paksa sembunyi
+    forgotPasswordForm.classList.add('hidden');
+    forgotPasswordForm.style.display = 'none';       // paksa sembunyi
+
+    // Update judul dan subtitle
+    authFormTitle.textContent = 'Masuk ke Akun Anda';
+    authFormSubtitle.textContent = 'Platform digital terpadu untuk guru madrasah';
+
+    // Reset alert
+    hideAllAlerts();
+
+    // Jika ada animation atau transition, paksa reset
+    authContainer.offsetHeight;  // reflow
+
+    // Reset scroll di auth body ke atas (jika ada scroll)
+    const authBody = document.querySelector('.auth-body');
+    if(authBody) authBody.scrollTop = 0;
+
+    // Reset semua form supaya benar-benar kosong
+    loginForm.reset();
+    forgotPasswordForm.reset();
+}
+          
+// Show confirmation modal
+function showModal() {
+    emailConfirmationModal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+// Close modal
+function closeModal() {
+    emailConfirmationModal.classList.remove('active');
+    document.body.style.overflow = 'auto';
+    showForm('login'); // Kembali ke form login
+}
+
+// Handle resend confirmation email
+async function handleResendConfirmationEmail() {
+    const email = document.getElementById('signup-email').value.trim();
+    
+    if (!email) {
+        showAlert('error', 'Email tidak ditemukan. Silakan coba daftar ulang.');
+        return;
+    }
+    
+    try {
+        resendEmailBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mengirim...';
+        resendEmailBtn.disabled = true;
+        
+        // Resend confirmation email
+        const { error } = await supabaseClient.auth.resend({
+            type: 'signup',
+            email: email
+        });
+        
+        if (error) throw error;
+        
+        showAlert('success', 'Email konfirmasi telah dikirim ulang ke ' + email);
+        
+    } catch (error) {
+        showAlert('error', error.message || 'Gagal mengirim email konfirmasi ulang.');
+    } finally {
+        resendEmailBtn.innerHTML = '<i class="fas fa-redo"></i> Minta Email Konfirmasi Ulang';
+        resendEmailBtn.disabled = false;
+    }
+}
+      
         // Show alert message
         function showAlert(type, message) {
             // Hide all alerts first
@@ -3182,8 +3404,8 @@
         // Inisialisasi app saat DOM siap
         document.addEventListener('DOMContentLoaded', initApp);
 
-        // Handle Supabase auth state changes
-        supabase.auth.onAuthStateChange((event, session) => {
+        // Handle Supabase auth state changes (Langkah 2)
+        supabaseClient.auth.onAuthStateChange((event, session) => {
             if (event === 'SIGNED_IN' && session) {
                 currentUser = session.user;
                 loadUserProfile();
@@ -3196,6 +3418,7 @@
                 showAuth();
             }
         });
+        })(); // End of IIFE
     </script>
 </body>
 </html>
